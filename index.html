@@ -46,7 +46,13 @@
 <div class="line"><h2>训练计划</h2><select id="plan" aria-label="查看计划" style="width:auto"><option>A</option><option>B</option></select></div>
 <p class="muted" id="schedule" style="margin-top:5px"></p>
 <div id="plan-list" class="plan-list"></div>
-<details><summary>记录备份</summary><p class="muted">记录保存在当前浏览器。换设备时可导出和导入。</p><button id="export">导出 JSON</button> <label style="display:inline-block">导入 JSON<input type="file" id="import" accept=".json,application/json"></label></details>
+<details id="github-settings"><summary>GitHub 同步</summary>
+<p class="muted">首次连接需要一个仅限 training-log 仓库、Contents 只读的 GitHub 令牌。连接后，当前浏览器每次打开页面会自动读取训练历史。</p>
+<form id="github-form"><label>GitHub 只读令牌<input id="github-token" type="password" autocomplete="off" required></label>
+<button type="submit">连接 GitHub</button> <button type="button" id="github-disconnect">断开连接</button></form>
+<p id="github-status" role="status"></p>
+<button id="export">导出 JSON</button>
+</details>
 </section>
 </main>
 <script>
@@ -258,29 +264,51 @@ $('export').onclick = () => {
   link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
-$('import').onchange = async event => {
-  const file = event.target.files[0];
-  if (!file) return;
+const githubKey = 'strength-log-github-read-token';
+const historyUrl = 'https://api.github.com/repos/ButuSun/training-log/contents/training-history.json';
+let syncVersion = 0;
+async function syncHistory(token) {
+  const attempt = ++syncVersion;
+  $('github-status').textContent = '正在读取 GitHub 训练历史…';
   try {
-    const records = JSON.parse(await file.text()).sessions;
-    if (!Array.isArray(records) || !records.length) throw Error();
-    const merged = {...sessions};
-    let count = 0;
+    const response = await fetch(historyUrl,{
+      cache:'no-store',
+      headers:{Authorization:'Bearer ' + token, Accept:'application/vnd.github.raw+json'}
+    });
+    if (!response.ok) throw Error('GitHub 返回 ' + response.status + '，请检查令牌和仓库权限。');
+    const {sessions:records} = await response.json();
+    if (attempt !== syncVersion) return;
+    if (!Array.isArray(records) || !records.length) throw Error('GitHub 文件没有可读取的训练记录。');
+    const latest = JSON.parse(localStorage.getItem(key) || '{}');
+    const merged = {...latest,...sessions};
     for (const record of records) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(record.date) || record.date > today || dateAt(record.date).toISOString().slice(0,10) !== record.date ||
-          !Array.isArray(record.exercises) || !record.exercises.length || !record.exercises.every(item =>
-          typeof item.name === 'string' && item.name.trim() && Number.isFinite(item.weight) && item.weight >= 0 &&
-          Number.isInteger(item.reps) && item.reps > 0 && Number.isInteger(item.sets) && item.sets > 0 &&
-          (item.rpe == null || Number.isFinite(item.rpe) && item.rpe >= 1 && item.rpe <= 10))) throw Error();
-      if (!Object.hasOwn(merged,record.date)) { merged[record.date] = record; count++; }
+      if (!record || !/^\d{4}-\d{2}-\d{2}$/.test(record.date) || record.date > today ||
+          !Array.isArray(record.exercises) || !record.exercises.length) throw Error('GitHub 文件中的训练记录格式有误。');
+      if (!Object.hasOwn(merged,record.date)) merged[record.date] = record;
     }
-    if (hasChanges && !confirm('导入前要放弃当前未保存的修改吗？')) return;
-    if (persist(merged,'')) {
-      choose(selected);
-      $('status').textContent = '导入 ' + count + ' 天，已有日期已跳过。';
-    }
-  } catch { $('status').textContent = '导入失败，请选择有效的训练记录 JSON。'; }
-  finally { event.target.value = ''; }
+    localStorage.setItem(key,JSON.stringify(merged));
+    sessions = merged;
+    if (!hasChanges && !$('movement').value.trim()) choose(selected,false);
+    else renderCalendar();
+    localStorage.setItem(githubKey,token);
+    $('github-token').value = '';
+    $('github-status').textContent = '已同步 GitHub 历史，本机已有记录优先保留。';
+  } catch (error) {
+    if (attempt !== syncVersion) return;
+    $('github-status').textContent = error.message || '同步失败，已保留本机记录。';
+    $('github-settings').open = true;
+  }
+}
+$('github-form').onsubmit = event => {
+  event.preventDefault();
+  const token = $('github-token').value.trim();
+  if (token) syncHistory(token);
+};
+$('github-disconnect').onclick = () => {
+  syncVersion++;
+  localStorage.removeItem(githubKey);
+  $('github-token').value = '';
+  $('github-status').textContent = '已断开 GitHub，本机训练记录仍可查看。';
 };
 function refreshToday() {
   const current = chinaDate.format(new Date());
@@ -304,5 +332,11 @@ function openPage(checkins) {
 $('open-log').onclick = () => openPage(false);
 $('open-checkins').onclick = () => openPage(true);
 choose(today);
+try {
+  const savedToken = localStorage.getItem(githubKey);
+  if (savedToken) syncHistory(savedToken);
+} catch {
+  $('github-status').textContent = '当前浏览器无法保存 GitHub 连接。';
+}
 </script>
 </html>
