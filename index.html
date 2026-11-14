@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f5f5f2">
+  <meta name="description" content="个人力量训练记录器">
+  <title>TRAINING LOG</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">T</span><div><b>TRAINING LOG</b><small>PERSONAL STRENGTH LOG</small></div></div>
+      <nav class="side-nav">
+        <button class="nav-btn active" data-view="today"><span>01</span> 今日训练</button>
+        <button class="nav-btn" data-view="history"><span>02</span> 训练历史</button>
+        <button class="nav-btn" data-view="plans"><span>03</span> 训练计划</button>
+        <button class="nav-btn" data-view="settings"><span>04</span> 设置</button>
+      </nav>
+      <div class="sidebar-bottom"><span class="status-dot" id="connectionDot"></span><span id="connectionText">尚未连接云端</span></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="mobile-brand"><span class="brand-mark">T</span><b>TRAINING LOG</b></div>
+        <div class="topbar-meta"><span id="todayLabel"></span><span class="sync-state" id="syncState">未连接</span></div>
+      </header>
+
+      <section class="view active" id="view-today">
+        <div class="page-heading">
+          <div><p class="eyebrow">YOUR NEXT SESSION</p><h1>今日训练</h1><p class="subheading">把注意力放在训练本身，记录交给这里。</p></div>
+          <div class="plan-switch"><span>下一次计划</span><strong id="nextPlanBadge">B</strong></div>
+        </div>
+        <div class="notice" id="nextPlanNote">根据最近一次力量训练自动安排 A/B 交替。</div>
+        <div class="session-toolbar">
+          <div><span class="eyebrow">SESSION</span><h2 id="sessionTitle">B 计划</h2></div>
+          <div class="toolbar-actions"><button class="button ghost" id="refreshBtn">刷新数据</button><button class="button dark" id="saveWorkoutBtn">保存本次训练</button></div>
+        </div>
+        <div id="exerciseList" class="exercise-list"></div>
+        <div class="session-footer">
+          <label class="field grow"><span>训练感受（选填）</span><input id="sessionNote" placeholder="例如：状态不错，卧推最后一组比较吃力"></label>
+          <div class="session-summary"><span>本次动作</span><b id="exerciseCount">0</b><span>预计训练容量</span><b id="volumeCount">0 kg</b></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-history">
+        <div class="page-heading"><div><p class="eyebrow">TRAINING ARCHIVE</p><h1>训练历史</h1><p class="subheading">每一次训练都留下可追溯的记录。</p></div></div>
+        <div class="stats-grid">
+          <div class="stat-card"><span>累计训练</span><strong id="totalSessions">0</strong><small>次力量训练</small></div>
+          <div class="stat-card"><span>最近 30 天</span><strong id="monthSessions">0</strong><small>次力量训练</small></div>
+          <div class="stat-card"><span>最近训练</span><strong id="lastSessionDate">—</strong><small id="lastSessionType">暂无记录</small></div>
+        </div>
+        <div class="section-title"><h2>全部记录</h2><span id="historyCount">0 条</span></div>
+        <div id="historyList" class="history-list"></div>
+      </section>
+
+      <section class="view" id="view-plans">
+        <div class="page-heading"><div><p class="eyebrow">PROGRAM BUILDER</p><h1>训练计划</h1><p class="subheading">保留教练计划，也允许你根据实际情况调整。</p></div><button class="button dark" id="savePlansBtn">保存计划</button></div>
+        <div class="plan-tabs"><button class="plan-tab active" data-plan="A">A 计划</button><button class="plan-tab" data-plan="B">B 计划</button></div>
+        <div id="planEditor" class="plan-editor"></div>
+        <p class="muted small">提示：目标重量可以留空。计划编辑只影响之后的训练，不会修改历史记录。</p>
+      </section>
+
+      <section class="view" id="view-settings">
+        <div class="page-heading"><div><p class="eyebrow">PREFERENCES & CONNECTION</p><h1>设置</h1><p class="subheading">管理云端连接与个人数据。</p></div></div>
+        <div class="settings-card">
+          <div class="section-title"><h2>云端连接</h2><span class="pill" id="authPill">未登录</span></div>
+          <label class="field"><span>Cloudflare Worker API 地址</span><input id="apiUrl" placeholder="https://your-worker.your-subdomain.workers.dev"></label>
+          <label class="field"><span>访问口令</span><input id="appPassword" type="password" autocomplete="current-password" placeholder="部署 Worker 时设置的 APP_PASSWORD"></label>
+          <div class="inline-actions"><button class="button dark" id="connectBtn">连接并读取数据</button><button class="button ghost" id="logoutBtn">退出登录</button></div>
+          <p class="muted small">访问口令只用于登录接口，不会写入训练 JSON。登录令牌保存在当前浏览器会话中。</p>
+        </div>
+        <div class="settings-card">
+          <div class="section-title"><h2>数据备份</h2><span class="muted small">JSON</span></div>
+          <p class="muted">将训练历史、计划和设置导出为文件。更换设备或部署环境前，建议先备份。</p>
+          <div class="inline-actions"><button class="button ghost" id="exportBtn">导出全部数据</button><label class="button ghost file-button">导入备份<input type="file" id="importFile" accept="application/json"></label></div>
+        </div>
+        <div class="settings-card">
+          <div class="section-title"><h2>数据状态</h2></div>
+          <div class="data-row"><span>训练记录</span><b id="settingsWorkoutCount">0 条</b></div>
+          <div class="data-row"><span>计划动作</span><b id="settingsExerciseCount">0 个</b></div>
+          <div class="data-row"><span>最后同步</span><b id="lastSyncAt">尚未同步</b></div>
+        </div>
+        <div class="danger-note"><b>隐私提示</b><p>仓库虽然是 Private，但 Pages 静态网页可能公开访问。训练 JSON 只经 Worker 鉴权读取，GitHub Token 只保存在 Worker Secret 中。不要把 Token 或访问口令填进代码文件。</p></div>
+      </section>
+
+      <footer class="app-footer"><span>TRAINING LOG · V1.0</span><span>CONSISTENCY OVER INTENSITY</span></footer>
+    </main>
+  </div>
+
+  <nav class="mobile-nav">
+    <button class="nav-btn active" data-view="today"><span>01</span>训练</button>
+    <button class="nav-btn" data-view="history"><span>02</span>历史</button>
+    <button class="nav-btn" data-view="plans"><span>03</span>计划</button>
+    <button class="nav-btn" data-view="settings"><span>04</span>设置</button>
+  </nav>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="./app.js"></script>
+</body>
+</html>
