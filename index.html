@@ -95,13 +95,7 @@ body:has(.sheet[open]){overflow:hidden}
 <div class="line"><h2>训练计划</h2><select id="plan" aria-label="查看计划" style="width:auto"><option>A</option><option>B</option></select></div>
 <p class="muted" id="schedule" style="margin-top:5px"></p>
 <div id="plan-list" class="plan-list"></div>
-<details id="github-settings"><summary>云端连接</summary>
-<p class="muted">首次连接需要仅限 training-log 仓库、Contents 可读写的 GitHub 令牌。连接后，网页会自动读取训练记录，保存时自动上传。</p>
-<form id="github-form"><label>GitHub 令牌<input id="github-token" type="password" autocomplete="off" required></label>
-<button type="submit">连接 GitHub</button> <button type="button" id="github-disconnect">断开连接</button></form>
-<p id="github-status" role="status"></p>
-<button id="export">导出 JSON</button>
-</details>
+<button type="button" id="export">导出 JSON</button>
 </section>
 </main>
 <dialog class="sheet" id="plan-sheet" aria-labelledby="sheet-title">
@@ -121,6 +115,9 @@ const plans = {
 };
 const days = ['日','一','二','三','四','五','六'];
 const key = 'strength-log-v2';
+const publicCacheKey = 'strength-log-public-cache';
+const editsKey = 'strength-log-web-edits';
+const legacyQueueKey = 'strength-log-github-pending';
 const chinaDate = new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'});
 const dateAt = iso => new Date(iso + 'T00:00:00Z');
 let today = chinaDate.format(new Date());
@@ -129,10 +126,24 @@ let month = selected.slice(0,7);
 let calendarDate = selected;
 let movement = '';
 let sessions = {};
+let localEdits = {};
+let needsMigration = false;
 let draft = [];
 let hasChanges = false;
 let editing = -1;
-try { sessions = JSON.parse(localStorage.getItem(key) || '{}'); }
+try {
+  const cached = localStorage.getItem(publicCacheKey);
+  needsMigration = cached === null;
+  sessions = JSON.parse(cached ?? localStorage.getItem(key) ?? '{}');
+  localEdits = JSON.parse(localStorage.getItem(editsKey) || '{}');
+  if (needsMigration) {
+    const queue = JSON.parse(localStorage.getItem(legacyQueueKey) || '{}');
+    for (const [date, entry] of Object.entries(queue)) {
+      if (entry?.record && !Object.hasOwn(localEdits,date)) localEdits[date] = entry.record;
+    }
+  }
+  sessions = {...sessions,...localEdits};
+} 
 catch { $('status').textContent = '无法读取浏览器记录。'; }
 function text(tag, value) {
   const node = document.createElement(tag);
@@ -458,24 +469,26 @@ $('exercise-form').onsubmit = event => {
   renderDraft();
   $('status').textContent = isNew ? '动作已添加。' : '动作已更新。';
 };
-function persist(next, message) {
-  try { localStorage.setItem(key,JSON.stringify(next)); }
-  catch { $('status').textContent = '浏览器保存失败。'; return false; }
-  sessions = next;
+function saveLocalEdit(record) {
+  const next = {...localEdits,[record.date]:record};
+  try {
+    localStorage.setItem(editsKey,JSON.stringify(next));
+  } catch {
+    $('status').textContent = '浏览器保存失败。';
+    return;
+  }
+  localEdits = next;
+  sessions = {...sessions,[record.date]:record};
   hasChanges = false;
   renderCalendar();
-  $('status').textContent = message;
-  return true;
+  $('status').textContent = '已保存到此浏览器。';
 }
 $('save').onclick = () => {
   if (movement) { $('status').textContent = '请先添加或更新正在填写的动作。'; return; }
   if (!draft.length && !sessions[selected]) { $('status').textContent = '请先添加至少一个动作。'; return; }
   if (selected > today) { $('status').textContent = '训练完成后才可保存到日历。'; return; }
   const record = {...sessions[selected],date:selected,exercises:draft.slice(),note:$('note').value.trim()};
-  if (persist({...sessions,[selected]:record},'已保存到本机。')) {
-    try { scheduleUpload(record); }
-    catch { syncStatus('已保存到本机 · 无法记录上传状态'); }
-  }
+  saveLocalEdit(record);
 };
 $('export').onclick = () => {
   const url = URL.createObjectURL(new Blob([JSON.stringify({sessions:Object.values(sessions)},null,2)],{type:'application/json'}));
@@ -485,212 +498,53 @@ $('export').onclick = () => {
   link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
-const githubKey = 'strength-log-github-read-token';
-const queueKey = 'strength-log-github-pending';
-const historyUrl = 'https://api.github.com/repos/ButuSun/training-log/contents/training-history.json';
-let pending = {};
-let cloud = null;
-let githubToken = '';
-let syncing = false;
-let syncAgain = false;
-let retryTimer;
-let retryDelay = 5000;
-let lastSyncStarted = 0;
-const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
-const owns = (object, property) => Object.prototype.hasOwnProperty.call(object, property);
-function storeQueue(next) {
-  localStorage.setItem(queueKey, JSON.stringify(next));
-  pending = next;
-}
-function scheduleUpload(record) {
-  const entry = {record};
-  if (owns(pending, record.date) && owns(pending[record.date], 'base')) {
-    entry.base = pending[record.date].base;
-  } else if (cloud) {
-    entry.base = cloud[record.date] ?? null;
-  }
-  storeQueue({...pending, [record.date]:entry});
-  syncHistory();
-}
-function connectionStatus(message) {
-  if ($('github-status').textContent !== message) $('github-status').textContent = message;
-}
-function syncStatus(message) {
-  connectionStatus(message);
-  if ($('cloud-status').textContent !== message) $('cloud-status').textContent = message;
-}
-function githubError(response, writing = false) {
-  const error = Error('GitHub 返回 ' + response.status + '。');
-  error.status = response.status;
-  error.retry = response.status >= 500 || response.status === 429 ||
-    response.headers.get('x-ratelimit-remaining') === '0';
-  if (response.status === 401) error.message = 'GitHub 授权已过期，请重新连接。';
-  else if (response.status === 403 || response.status === 404) {
-    error.message = writing
-      ? 'GitHub 拒绝写入，请检查 training-log 的 Contents 读写权限并重新授权。'
-      : '无法读取私有训练文件，请检查 GitHub 授权和仓库访问权限。';
-  }
-  return error;
-}
-async function syncHistory(token = githubToken) {
-  if (!token) {
-    if (Object.keys(pending).length) syncStatus('已保存在本机 · 连接 GitHub 后自动上传');
-    return;
-  }
-  if (syncing) {
-    syncAgain = true;
-    return;
-  }
-  syncing = true;
-  lastSyncStarted = Date.now();
-  clearTimeout(retryTimer);
-  retryTimer = undefined;
+let refreshing = false;
+let lastRefresh = 0;
+async function refreshPublicRecords() {
+  if (document.hidden || refreshing || Date.now() - lastRefresh < 10000) return;
+  refreshing = true;
+  lastRefresh = Date.now();
   try {
-    if (!cloud) syncStatus('正在读取云端训练记录…');
-    const headers = {
-      Authorization:'Bearer ' + token,
-      Accept:'application/vnd.github+json',
-      'X-GitHub-Api-Version':'2022-11-28'
-    };
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const response = await fetch(historyUrl, {headers,cache:'no-store',signal:AbortSignal.timeout(15000)});
-      if (!response.ok) throw githubError(response);
-      const {sha,content,encoding} = await response.json();
-      if (!sha || typeof content !== 'string' || encoding !== 'base64') {
-        throw Error('GitHub 训练文件格式无法识别。');
+    const response = await fetch('./training-history.json',{cache:'no-cache',signal:AbortSignal.timeout(15000)});
+    if (!response.ok) throw Error('训练记录加载失败');
+    const data = await response.json();
+    if (!Array.isArray(data.sessions)) throw Error('训练记录格式错误');
+    const incoming = Object.create(null);
+    for (const record of data.sessions) {
+      if (!record || !/^\d{4}-\d{2}-\d{2}$/.test(record.date) ||
+          !Array.isArray(record.exercises) || Object.hasOwn(incoming,record.date)) {
+        throw Error('训练记录包含无效或重复日期');
       }
-      const data = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(Uint8Array.from(atob(content), char => char.charCodeAt(0))));
-      if (!Array.isArray(data.sessions)) throw Error('GitHub 训练文件缺少 sessions。');
-      const remote = Object.create(null);
-      for (const record of data.sessions) {
-        if (!record || !/^\d{4}-\d{2}-\d{2}$/.test(record.date) ||
-            !Array.isArray(record.exercises) || owns(remote, record.date)) {
-          throw Error('GitHub 文件中有无效或重复日期，已保留本机记录。');
-        }
-        remote[record.date] = record;
-      }
-      if (token !== githubToken) return;
-      cloud = remote;
-      const queued = {...pending};
-      const local = JSON.parse(localStorage.getItem(key) || '{}');
-      for (const [date, record] of Object.entries(local)) {
-        if (!owns(remote, date) && !owns(queued, date)) queued[date] = {record,base:null};
-      }
-      storeQueue(queued);
-      const merged = {...remote};
-      for (const [date, entry] of Object.entries(queued)) merged[date] = entry.record;
-      if (!same(merged, sessions)) {
-        const selectedChanged = !same(merged[selected], sessions[selected]);
-        localStorage.setItem(key, JSON.stringify(merged));
-        sessions = merged;
-        if (selectedChanged && !hasChanges && !movement && !$('exercise-note').value) choose(selected,false);
-        else renderCalendar();
-      }
-      const uploaded = {...remote};
-      const completed = [];
-      let changes = false;
-      for (const [date, entry] of Object.entries(queued)) {
-        const current = remote[date] ?? null;
-        if (!same(entry.record, current)) {
-          if (current !== null && (!owns(entry,'base') || !same(entry.base, current))) continue;
-          uploaded[date] = entry.record;
-          changes = true;
-        }
-        completed.push(date);
-      }
-      if (changes) {
-        const bytes = new TextEncoder().encode(JSON.stringify({
-          ...data,sessions:Object.values(uploaded).sort((a,b) => a.date.localeCompare(b.date))
-        }, null, 2) + '\n');
-        let binary = '';
-        for (const byte of bytes) binary += String.fromCharCode(byte);
-        const result = await fetch(historyUrl, {
-          method:'PUT',
-          headers:{...headers,'Content-Type':'application/json'},
-          body:JSON.stringify({message:'Sync training records',content:btoa(binary),sha}),
-          signal:AbortSignal.timeout(20000)
-        });
-        if (result.status === 409 || result.status === 422) {
-          if (attempt < 2) continue;
-          throw githubError(result,true);
-        }
-        if (!result.ok) throw githubError(result,true);
-      }
-      if (token !== githubToken) return;
-      cloud = uploaded;
-      const remaining = {...pending};
-      for (const date of completed) {
-        if (same(remaining[date], queued[date])) delete remaining[date];
-        else if (remaining[date] && same(remaining[date].base, queued[date].base)) {
-          remaining[date] = {...remaining[date],base:uploaded[date]};
-        }
-      }
-      storeQueue(remaining);
-      const conflicts = Object.keys(remaining).filter(date => same(remaining[date],queued[date]));
-      if (conflicts.length) {
-        syncStatus('以下日期的云端记录不同，已保留本机版本：' + conflicts.join('、'));
-      } else if (Object.keys(remaining).length) {
-        syncStatus('已保存在本机 · 等待上传');
-      } else {
-        syncStatus(changes ? '已上传到 GitHub' : '已与 GitHub 同步');
-      }
-      retryDelay = 5000;
-      return;
+      incoming[record.date] = record;
     }
-  } catch (error) {
-    if (token !== githubToken) return;
-    const temporary = error.retry || error.name === 'TimeoutError' || error instanceof TypeError;
-    syncStatus(temporary ? '同步暂未完成 · 已保存在本机，稍后自动重试' :
-      '同步暂未完成 · ' + error.message);
-    if (temporary) {
-      retryTimer = setTimeout(() => {
-        retryTimer = undefined;
-        syncHistory();
-      }, retryDelay);
-      retryDelay = Math.min(retryDelay * 2, 300000);
+    if (needsMigration) {
+      for (const [date, record] of Object.entries(sessions)) {
+        if (!Object.hasOwn(incoming,date) && !Object.hasOwn(localEdits,date)) localEdits[date] = record;
+      }
+      try {
+        localStorage.setItem(editsKey,JSON.stringify(localEdits));
+        needsMigration = false;
+      } catch {}
     }
+    if (!needsMigration) {
+      try { localStorage.setItem(publicCacheKey,JSON.stringify(incoming)); } catch {}
+    }
+    const merged = {...incoming,...localEdits};
+    const selectedChanged = JSON.stringify(merged[selected]) !== JSON.stringify(sessions[selected]);
+    sessions = merged;
+    if (selectedChanged && !hasChanges && !movement && !$('exercise-note').value) choose(selected,false);
+    else renderCalendar();
+    $('cloud-status').textContent = '';
+  } catch {
+    $('cloud-status').textContent = '暂时无法读取公开训练记录，稍后会自动重试。';
   } finally {
-    syncing = false;
-    if (syncAgain) {
-      syncAgain = false;
-      syncHistory();
-    }
+    refreshing = false;
   }
 }
-function connectGithub(token) {
-  localStorage.setItem(githubKey,token);
-  githubToken = token;
-  cloud = null;
-  return syncHistory();
-}
-function disconnectGithub() {
-  githubToken = '';
-  cloud = null;
-  clearTimeout(retryTimer);
-  retryTimer = undefined;
-  localStorage.removeItem(githubKey);
-  syncStatus('已断开 GitHub · 本机训练记录已保留');
-}
-function refreshCloud() {
-  if (githubToken && !document.hidden && !syncing && !retryTimer &&
-      Date.now() - lastSyncStarted >= 15000) syncHistory();
-}
-window.addEventListener('online', () => syncHistory());
-window.addEventListener('focus', refreshCloud);
-document.addEventListener('visibilitychange', refreshCloud);
-setInterval(refreshCloud, 60000);
-$('github-form').onsubmit = event => {
-  event.preventDefault();
-  const token = $('github-token').value.trim();
-  if (token) {
-    $('github-token').value = '';
-    connectGithub(token);
-  }
-};
-$('github-disconnect').onclick = () => {
-  disconnectGithub();
-  $('github-token').value = '';
-};
+window.addEventListener('online',refreshPublicRecords);
+window.addEventListener('focus',refreshPublicRecords);
+document.addEventListener('visibilitychange',refreshPublicRecords);
+setInterval(refreshPublicRecords,60000);
 function refreshToday() {
   const current = chinaDate.format(new Date());
   if (current === today) return;
@@ -717,12 +571,6 @@ $('open-plans').onclick = () => openPage('plans');
 $('open-checkins').onclick = () => openPage('checkins');
 renderPlan();
 choose(today);
-try {
-  pending = JSON.parse(localStorage.getItem(queueKey) || '{}');
-  githubToken = localStorage.getItem(githubKey) || '';
-  if (githubToken || Object.keys(pending).length) syncHistory();
-} catch {
-  $('github-status').textContent = '当前浏览器无法保存 GitHub 连接。';
-}
+refreshPublicRecords();
 </script>
 </html>
