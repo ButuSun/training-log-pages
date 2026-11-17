@@ -24,7 +24,7 @@ body{background:#fff}main{max-width:880px;padding:30px 28px 120px}header{margin-
 .calendar{gap:12px 6px;margin:24px 0}.calendar small{color:#aaa}.calendar button{height:70px;border:0;border-radius:0;font-size:19px;background:none!important;box-shadow:none!important;position:relative}.calendar button.done{color:#222}.calendar button.done .mark{display:grid;place-items:center;width:30px;height:30px;margin:auto;border:1px solid #bbb;border-radius:50%;font-size:17px;color:#333}.calendar button[data-selected]{outline:1px solid #bbb;border-radius:12px}.calendar button[aria-current=date]{font-weight:800;text-decoration:underline;text-underline-offset:6px}.calendar button.done[aria-current=date]{outline:none}.calendar .mark{height:26px}.legend{padding:12px 0;color:#777}.record{border-top:1px solid #eee;padding-top:20px}.record p{line-height:2;font-size:15px}#github-settings{margin-top:36px;font-size:14px;color:#777}#github-form{margin-top:16px}#github-form button{margin:10px 0}
 @media(min-width:721px){#exercise-form{max-width:650px;margin:auto}#log-page>label,#entries,#save,#status,.quick-actions{max-width:650px;margin-left:auto;margin-right:auto}#save{display:block}.calendar{gap:16px}.calendar button{height:80px}}
 @media(max-width:720px){main{padding:20px 20px 110px}header{margin-bottom:24px}h1{font-size:25px}h2{font-size:20px}header small{font-size:12px}section{padding:0}.line button{font-size:13px;border:0;background:#f5f5f5}.form-grid{grid-template-columns:1fr;gap:22px;margin:20px 0}.fields{grid-template-columns:1fr 1fr 1.2fr;gap:10px}.fields label[style]{grid-column:auto!important}.fields input,.fields select{font-size:18px;min-height:49px;padding:10px}.fields label{font-size:13px;color:#666}.wheel-shell{max-width:100%;margin-top:7px}.wheel{height:160px;padding:60px 0}.wheel-shell::before{inset:60px 0}.wheel div{font-size:25px}#weight-label{font-size:13px;color:#666}.calendar{gap:8px 0;margin:20px -7px}.calendar button{height:65px;font-size:17px}.calendar button.done .mark{width:26px;height:26px;font-size:15px}.plan-list{grid-template-columns:1fr}.tabs button{flex:1;max-width:180px;min-height:52px}#status{font-size:13px}.plan{margin-top:0}}
-.form-grid{grid-template-columns:1.3fr 1fr 1fr;gap:14px;margin:20px 0}
+.form-grid{grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr));gap:clamp(6px,2vw,14px);margin:20px 0}
 .wheel-label{display:block;font-size:13px;color:#555}
 .wheel div{font-size:clamp(14px,4.5vw,23px);white-space:nowrap}
 #exercise-form>#movement{width:100%;text-align:left;background:transparent;border-bottom:1px solid #eee;padding-right:38px;position:relative}
@@ -79,8 +79,8 @@ body:has(.sheet[open]){overflow:hidden}
 <div><span class="wheel-label" id="weight-label">重量（kg）</span><div class="wheel-shell"><div id="wheel" class="wheel" role="listbox" tabindex="0" aria-labelledby="weight-label"></div></div></div>
 <div><span class="wheel-label" id="reps-label">次数</span><div class="wheel-shell"><div id="reps" class="wheel" role="listbox" tabindex="0" aria-labelledby="reps-label"></div></div></div>
 <div><span class="wheel-label" id="sets-label">组数</span><div class="wheel-shell"><div id="sets" class="wheel" role="listbox" tabindex="0" aria-labelledby="sets-label"></div></div></div>
+<div><span class="wheel-label" id="rpe-label">RPE</span><div class="wheel-shell"><div id="rpe" class="wheel" role="listbox" tabindex="0" aria-labelledby="rpe-label"></div></div></div>
 </div>
-<label>RPE<select id="rpe"><option value="">选填</option></select></label>
 <label style="margin-top:10px">动作备注<textarea id="exercise-note" rows="2" maxlength="2000" placeholder="记录这个动作的感受或调整"></textarea></label>
 <button type="submit" id="add-entry" disabled>添加动作</button>
 </form>
@@ -237,6 +237,8 @@ const weights = Array.from({length:401},(_,index)=>index * 1.25);
 const weightWheel = createWheel('wheel',weights,weightLabel);
 const repsWheel = createWheel('reps',Array.from({length:999},(_,index)=>index + 1));
 const setsWheel = createWheel('sets',Array.from({length:99},(_,index)=>index + 1));
+const rpeWheel = createWheel('rpe',[null,...Array.from({length:19},(_,index)=>1 + index / 2)],
+  value => value === null ? '选填' : String(value));
 function setWeight(weight) {
   const index = Math.max(0,Math.min(weights.length - 1,Math.round(weight / 1.25)));
   weightWheel.set(weights[index]);
@@ -246,7 +248,6 @@ function setMovement(name) {
   $('movement').textContent = name || '选择动作';
   $('add-entry').disabled = !name;
 }
-for (let i=1;i<=10;i+=0.5) $('rpe').add(new Option(String(i),String(i)));
 function moveExercise(from, to) {
   const [item] = draft.splice(from,1);
   draft.splice(to,0,item);
@@ -266,7 +267,8 @@ function renderDraft() {
       setMovement(item.name);
       repsWheel.set(item.reps);
       setsWheel.set(item.sets);
-      $('rpe').value = item.rpe ?? '';
+      rpeWheel.set(null);
+      if (item.rpe != null) rpeWheel.set(Number(item.rpe));
       $('exercise-note').value = item.note ?? '';
       setWeight(item.weight);
       $('add-entry').textContent = '更新动作';
@@ -314,6 +316,7 @@ function resetForm() {
   setWeight(0);
   repsWheel.set(8);
   setsWheel.set(3);
+  rpeWheel.set(null);
 }
 function choose(iso, moveMonth = true) {
   if ((hasChanges || movement) && !confirm('这一天还有未保存的修改，切换日期？')) return false;
@@ -443,7 +446,7 @@ $('exercise-form').onsubmit = event => {
   if (!movement) return;
   const entry = {
     name:movement,weight:weightWheel.value(),reps:repsWheel.value(),sets:setsWheel.value(),
-    rpe:$('rpe').value ? +$('rpe').value : null,note:$('exercise-note').value.trim()
+    rpe:rpeWheel.value(),note:$('exercise-note').value.trim()
   };
   const isNew = editing < 0;
   if (isNew) draft.push(entry);
@@ -689,7 +692,7 @@ function openPage(page) {
   }
   if (page === 'checkins') renderCalendar();
   else if (page === 'log') {
-    for (const wheel of [weightWheel,repsWheel,setsWheel]) wheel.align();
+    for (const wheel of [weightWheel,repsWheel,setsWheel,rpeWheel]) wheel.align();
   }
   window.scrollTo({top:0,behavior:'instant'});
 }
