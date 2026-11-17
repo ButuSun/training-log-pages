@@ -95,12 +95,11 @@ body:has(.sheet[open]){overflow:hidden}
 <div class="line"><h2>训练计划</h2><select id="plan" aria-label="查看计划" style="width:auto"><option>A</option><option>B</option></select></div>
 <p class="muted" id="schedule" style="margin-top:5px"></p>
 <div id="plan-list" class="plan-list"></div>
-<details id="github-settings"><summary>GitHub 同步</summary>
-<p class="muted">连接后，保存训练会自动上传。网页使用仅限 training-log 仓库、Contents 可读写的 GitHub 令牌。</p>
+<details id="github-settings"><summary>云端连接</summary>
+<p class="muted">首次连接需要仅限 training-log 仓库、Contents 可读写的 GitHub 令牌。连接后，网页会自动读取训练记录，保存时自动上传。</p>
 <form id="github-form"><label>GitHub 令牌<input id="github-token" type="password" autocomplete="off" required></label>
 <button type="submit">连接 GitHub</button> <button type="button" id="github-disconnect">断开连接</button></form>
 <p id="github-status" role="status"></p>
-<button type="button" id="sync-now">立即同步</button>
 <button id="export">导出 JSON</button>
 </details>
 </section>
@@ -496,6 +495,7 @@ let syncing = false;
 let syncAgain = false;
 let retryTimer;
 let retryDelay = 5000;
+let lastSyncStarted = 0;
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const owns = (object, property) => Object.prototype.hasOwnProperty.call(object, property);
 function storeQueue(next) {
@@ -513,11 +513,11 @@ function scheduleUpload(record) {
   syncHistory();
 }
 function connectionStatus(message) {
-  $('github-status').textContent = message;
+  if ($('github-status').textContent !== message) $('github-status').textContent = message;
 }
 function syncStatus(message) {
   connectionStatus(message);
-  $('cloud-status').textContent = message;
+  if ($('cloud-status').textContent !== message) $('cloud-status').textContent = message;
 }
 function githubError(response, writing = false) {
   const error = Error('GitHub 返回 ' + response.status + '。');
@@ -542,9 +542,11 @@ async function syncHistory(token = githubToken) {
     return;
   }
   syncing = true;
+  lastSyncStarted = Date.now();
   clearTimeout(retryTimer);
+  retryTimer = undefined;
   try {
-    syncStatus('正在与 GitHub 同步…');
+    if (!cloud) syncStatus('正在读取云端训练记录…');
     const headers = {
       Authorization:'Bearer ' + token,
       Accept:'application/vnd.github+json',
@@ -575,11 +577,15 @@ async function syncHistory(token = githubToken) {
         if (!owns(remote, date) && !owns(queued, date)) queued[date] = {record,base:null};
       }
       storeQueue(queued);
-      const merged = {...remote,...local};
-      localStorage.setItem(key, JSON.stringify(merged));
-      sessions = merged;
-      if (!hasChanges && !movement) choose(selected,false);
-      else renderCalendar();
+      const merged = {...remote};
+      for (const [date, entry] of Object.entries(queued)) merged[date] = entry.record;
+      if (!same(merged, sessions)) {
+        const selectedChanged = !same(merged[selected], sessions[selected]);
+        localStorage.setItem(key, JSON.stringify(merged));
+        sessions = merged;
+        if (selectedChanged && !hasChanges && !movement && !$('exercise-note').value) choose(selected,false);
+        else renderCalendar();
+      }
       const uploaded = {...remote};
       const completed = [];
       let changes = false;
@@ -637,7 +643,10 @@ async function syncHistory(token = githubToken) {
     syncStatus(temporary ? '同步暂未完成 · 已保存在本机，稍后自动重试' :
       '同步暂未完成 · ' + error.message);
     if (temporary) {
-      retryTimer = setTimeout(() => syncHistory(), retryDelay);
+      retryTimer = setTimeout(() => {
+        retryTimer = undefined;
+        syncHistory();
+      }, retryDelay);
       retryDelay = Math.min(retryDelay * 2, 300000);
     }
   } finally {
@@ -658,14 +667,18 @@ function disconnectGithub() {
   githubToken = '';
   cloud = null;
   clearTimeout(retryTimer);
+  retryTimer = undefined;
   localStorage.removeItem(githubKey);
   syncStatus('已断开 GitHub · 本机训练记录已保留');
 }
-$('sync-now').onclick = () => syncHistory();
+function refreshCloud() {
+  if (githubToken && !document.hidden && !syncing && !retryTimer &&
+      Date.now() - lastSyncStarted >= 15000) syncHistory();
+}
 window.addEventListener('online', () => syncHistory());
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && Object.keys(pending).length) syncHistory();
-});
+window.addEventListener('focus', refreshCloud);
+document.addEventListener('visibilitychange', refreshCloud);
+setInterval(refreshCloud, 60000);
 $('github-form').onsubmit = event => {
   event.preventDefault();
   const token = $('github-token').value.trim();
