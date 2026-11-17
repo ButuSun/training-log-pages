@@ -146,12 +146,15 @@ function describe(exercise) {
   return name + ' · ' + weightLabel(weight) + ' × ' + reps + ' 次 × ' + sets + ' 组' +
     (rpe == null ? '' : ' · RPE ' + rpe) + (note ? ' · ' + note : '');
 }
+function hasTraining(record) {
+  return Boolean(record?.exercises.length || (record?.type === 'recovery' && record.note));
+}
 function renderCalendar() {
   $('today').textContent = today + ' 周' + days[dateAt(today).getUTCDay()];
   const [year, number] = month.split('-').map(Number);
   $('month').textContent = year + ' 年 ' + number + ' 月';
   const count = Object.values(sessions).filter(record =>
-    record.date.startsWith(month + '-') && record.exercises.length
+    record.date.startsWith(month + '-') && hasTraining(record)
   ).length;
   $('count').replaceChildren(
     month === today.slice(0,7) ? '本月打卡' : '当月打卡',
@@ -164,7 +167,7 @@ function renderCalendar() {
   const total = new Date(Date.UTC(year, number, 0)).getUTCDate();
   for (let day = 1; day <= total; day++) {
     const iso = month + '-' + String(day).padStart(2,'0');
-    const marker = sessions[iso]?.exercises.length ? '✓' : '';
+    const marker = hasTraining(sessions[iso]) ? '✓' : '';
     const button = text('button',String(day));
     button.setAttribute('aria-pressed',String(iso === calendarDate));
     if (marker) button.classList.add('done');
@@ -469,7 +472,7 @@ $('save').onclick = () => {
   if (movement) { $('status').textContent = '请先添加或更新正在填写的动作。'; return; }
   if (!draft.length && !sessions[selected]) { $('status').textContent = '请先添加至少一个动作。'; return; }
   if (selected > today) { $('status').textContent = '训练完成后才可保存到日历。'; return; }
-  const record = {date:selected,exercises:draft.slice(),note:$('note').value.trim()};
+  const record = {...sessions[selected],date:selected,exercises:draft.slice(),note:$('note').value.trim()};
   if (persist({...sessions,[selected]:record},'已保存到本机。')) {
     try { scheduleUpload(record); }
     catch { syncStatus('已保存到本机 · 无法记录上传状态'); }
