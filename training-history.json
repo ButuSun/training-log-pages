@@ -1,0 +1,391 @@
+{
+  "sessions": [
+    {
+      "date": "2026-10-22",
+      "exercises": [
+        {
+          "name": "深蹲",
+          "weight": 60,
+          "reps": 8,
+          "sets": 4,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "卧推",
+          "weight": 40,
+          "reps": 8,
+          "sets": 4,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "分腿蹲",
+          "weight": 10,
+          "reps": 10,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "杠铃划船",
+          "weight": 30,
+          "reps": 10,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "date": "2026-10-24",
+      "exercises": [
+        {
+          "name": "哈克深蹲",
+          "weight": 50,
+          "reps": 8,
+          "sets": 4,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "卧推",
+          "weight": 45,
+          "reps": 8,
+          "sets": 1,
+          "rpe": 8,
+          "note": ""
+        },
+        {
+          "name": "卧推",
+          "weight": 40,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        }
+      ],
+      "note": "其余动作在不同笔记中有出入，此处保留一致的组次。"
+    },
+    {
+      "date": "2026-10-27",
+      "exercises": [
+        {
+          "name": "实力举",
+          "weight": 30,
+          "reps": 8,
+          "sets": 1,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "实力举",
+          "weight": 25,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "硬拉",
+          "weight": 65,
+          "reps": 4,
+          "sets": 1,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "硬拉",
+          "weight": 55,
+          "reps": 6,
+          "sets": 2,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "后腿抬高蹲",
+          "weight": 7.5,
+          "reps": 8,
+          "sets": 2,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "上斜下拉",
+          "weight": 45,
+          "reps": 10,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "date": "2026-10-30",
+      "exercises": [
+        {
+          "name": "实力举",
+          "weight": 30,
+          "reps": 8,
+          "sets": 2,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "实力举",
+          "weight": 20,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "高位下拉",
+          "weight": 40,
+          "reps": 8,
+          "sets": 1,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "高位下拉",
+          "weight": 45,
+          "reps": 8,
+          "sets": 2,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "罗马尼亚硬拉",
+          "weight": 60,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "深蹲",
+          "weight": 40,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "山羊挺身",
+          "weight": 0,
+          "reps": 15,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "date": "2026-11-04",
+      "exercises": [
+        {
+          "name": "箱式深蹲",
+          "weight": 50,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "卧推",
+          "weight": 50,
+          "reps": 8,
+          "sets": 1,
+          "rpe": 10,
+          "note": ""
+        },
+        {
+          "name": "卧推",
+          "weight": 45,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "杠铃划船",
+          "weight": 35,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "date": "2026-11-07",
+      "exercises": [
+        {
+          "name": "哈克深蹲",
+          "weight": 50,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "哑铃卧推",
+          "weight": 12.5,
+          "reps": 8,
+          "sets": 1,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "哑铃卧推",
+          "weight": 15,
+          "reps": 8,
+          "sets": 2,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "哑铃卧推",
+          "weight": 17.5,
+          "reps": 8,
+          "sets": 1,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "杠铃划船",
+          "weight": 30,
+          "reps": 8,
+          "sets": 4,
+          "rpe": 8,
+          "note": ""
+        },
+        {
+          "name": "山羊挺身",
+          "weight": 0,
+          "reps": 12,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        }
+      ],
+      "note": "划船在不同健身房，杠铃杆重不确定，不作为后续调重参考。"
+    },
+    {
+      "date": "2026-11-10",
+      "exercises": [],
+      "note": "放松训练",
+      "type": "recovery"
+    },
+    {
+      "date": "2026-11-12",
+      "exercises": [
+        {
+          "name": "深蹲",
+          "weight": 45,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "卧推",
+          "weight": 40,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "杠铃划船",
+          "weight": 30,
+          "reps": 10,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "山羊挺身",
+          "weight": 0,
+          "reps": 15,
+          "sets": 2,
+          "rpe": null,
+          "note": ""
+        }
+      ],
+      "note": ""
+    },
+    {
+      "date": "2026-11-14",
+      "exercises": [
+        {
+          "name": "深蹲",
+          "weight": 26.25,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null
+        }
+      ],
+      "note": ""
+    },
+    {
+      "date": "2026-11-15",
+      "exercises": [
+        {
+          "name": "硬拉",
+          "weight": 40,
+          "reps": 8,
+          "sets": 2,
+          "rpe": 8,
+          "note": ""
+        },
+        {
+          "name": "实力举",
+          "weight": 25,
+          "reps": 8,
+          "sets": 2,
+          "rpe": 8,
+          "note": ""
+        },
+        {
+          "name": "实力举",
+          "weight": 30,
+          "reps": 8,
+          "sets": 1,
+          "rpe": 9,
+          "note": ""
+        },
+        {
+          "name": "分腿蹲",
+          "weight": 5,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "高位下拉",
+          "weight": 40,
+          "reps": 8,
+          "sets": 3,
+          "rpe": 7.5,
+          "note": ""
+        },
+        {
+          "name": "硬拉",
+          "weight": 50,
+          "reps": 6,
+          "sets": 1,
+          "rpe": null,
+          "note": "太重了，手拿不住。"
+        }
+      ],
+      "note": "下次硬拉应该触地。"
+    }
+  ]
+}
