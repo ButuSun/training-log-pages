@@ -89,6 +89,10 @@ body:has(.sheet[open]){overflow:hidden}
 <button type="button" class="dark" id="save">保存当天训练</button>
 <p id="status" class="muted" role="status"></p>
 <p id="cloud-status" class="muted" role="status"></p>
+<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+<button type="button" id="cloud-connect">连接云端</button>
+<button type="button" id="cloud-sync">同步待上传记录</button>
+</div>
 </section>
 </div>
 <section class="plan" id="plan-page" hidden>
@@ -118,6 +122,10 @@ const key = 'strength-log-v2';
 const publicCacheKey = 'strength-log-public-cache';
 const editsKey = 'strength-log-web-edits';
 const legacyQueueKey = 'strength-log-github-pending';
+const workerApi = 'https://butusun-training-api.sunburgerbo.workers.dev';
+const workerPasswordKey = 'strength-log-cloud-password-session';
+let cloudPassword = sessionStorage.getItem(workerPasswordKey) || '';
+let cloudBusy = false;
 const chinaDate = new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'});
 const dateAt = iso => new Date(iso + 'T00:00:00Z');
 let today = chinaDate.format(new Date());
@@ -481,7 +489,8 @@ function saveLocalEdit(record) {
   sessions = {...sessions,[record.date]:record};
   hasChanges = false;
   renderCalendar();
-  $('status').textContent = '已保存到此浏览器。';
+  $('status').textContent = '已保存到此浏览器，等待云端同步。';
+  if (cloudPassword) void syncPendingEdits();
 }
 $('save').onclick = () => {
   if (movement) { $('status').textContent = '请先添加或更新正在填写的动作。'; return; }
@@ -498,10 +507,74 @@ $('export').onclick = () => {
   link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
+async function cloudRequest(path,options={}) {
+  const response = await fetch(workerApi+path,{
+    ...options,
+    headers:{'Authorization':'Bearer '+cloudPassword,...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})},
+    cache:'no-store',signal:AbortSignal.timeout(20000)
+  });
+  const payload=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(payload.error||'HTTP '+response.status);
+  return payload;
+}
+function mergeCloudRecords(data) {
+  if(!Array.isArray(data.sessions))throw new Error('云端数据格式错误');
+  const incoming=Object.create(null);
+  for(const record of data.sessions){
+    if(!record||!/^\d{4}-\d{2}-\d{2}$/.test(record.date)||!Array.isArray(record.exercises))throw new Error('云端记录无效');
+    incoming[record.date]=record;
+  }
+  try{localStorage.setItem(publicCacheKey,JSON.stringify(incoming))}catch{}
+  sessions={...incoming,...localEdits};
+  if(!hasChanges&&!movement&&!$('exercise-note').value)choose(selected,false);
+  else renderCalendar();
+}
+async function syncPendingEdits(){
+  if(cloudBusy||!cloudPassword||!navigator.onLine)return;
+  cloudBusy=true;
+  try{
+    const remote=await cloudRequest('/api/history');
+    mergeCloudRecords(remote);
+    const entries=Object.entries(localEdits);
+    for(const [date,record] of entries){
+      await cloudRequest('/api/session',{method:'PUT',body:JSON.stringify(record)});
+      if(JSON.stringify(localEdits[date])===JSON.stringify(record)){
+        delete localEdits[date];
+        localStorage.setItem(editsKey,JSON.stringify(localEdits));
+      }
+    }
+    const updated=await cloudRequest('/api/history');
+    mergeCloudRecords(updated);
+    $('cloud-status').textContent=Object.keys(localEdits).length?'还有记录待同步':'云端已同步';
+    if(entries.length)$('status').textContent='训练记录已写入 GitHub。';
+  }catch(e){$('cloud-status').textContent='同步失败，本机记录已保留：'+e.message}
+  finally{cloudBusy=false}
+}
+async function connectCloud(){
+  if(cloudBusy)return;
+  const password=prompt('请输入 Cloudflare Worker 的 APP_PASSWORD（仅保存本次浏览器会话）');
+  if(password===null)return;
+  if(!password){$('cloud-status').textContent='密码不能为空';return}
+  cloudPassword=password;
+  try{
+    const remote=await cloudRequest('/api/history');
+    sessionStorage.setItem(workerPasswordKey,password);
+    mergeCloudRecords(remote);
+    $('cloud-connect').textContent='重新验证云端';
+    await syncPendingEdits();
+  }catch(e){
+    cloudPassword='';
+    sessionStorage.removeItem(workerPasswordKey);
+    $('cloud-status').textContent='云端连接失败：'+e.message;
+  }
+}
+$('cloud-connect').onclick=connectCloud;
+$('cloud-sync').onclick=()=>cloudPassword?void syncPendingEdits():void connectCloud();
 let refreshing = false;
 let lastRefresh = 0;
 async function refreshPublicRecords() {
-  if (document.hidden || refreshing || Date.now() - lastRefresh < 10000) return;
+  if(document.hidden||refreshing||Date.now()-lastRefresh<10000)return;
+  if(cloudPassword){void syncPendingEdits();return}
   refreshing = true;
   lastRefresh = Date.now();
   try {
@@ -572,5 +645,6 @@ $('open-checkins').onclick = () => openPage('checkins');
 renderPlan();
 choose(today);
 refreshPublicRecords();
+if(cloudPassword){$('cloud-connect').textContent='重新验证云端';void syncPendingEdits()}
 </script>
 </html>
