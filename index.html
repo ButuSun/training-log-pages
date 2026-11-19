@@ -103,16 +103,72 @@ body:has(.sheet[open]){overflow:hidden}
 #log-page details summary{font-size:14px;color:#555}
 #log-page #save:disabled{opacity:.5}
 #day-sheet .form-actions #cancel-entry{display:none}
+
+:root{--surface:#fff;--canvas:#f5f6f3;--edge:#dfe3dc;--ink:#202820;--accent:#2c614c;--soft-accent:#e8f1e9}
+body{background:var(--canvas);color:var(--ink)}
+main{max-width:860px;padding-inline:clamp(14px,3vw,30px)}
+header{align-items:center;border-bottom:1px solid var(--edge);padding:0 2px 14px;margin-bottom:18px}
+header h1{font-size:22px;letter-spacing:-.04em}
+header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-numeric:tabular-nums}
+#log-page,#plan-page,#checkin-page{width:100%;max-width:none;margin:0 auto;background:var(--surface);border:1px solid var(--edge);border-radius:20px;padding:clamp(16px,3.5vw,32px)}
+#log-page #training-editor,#log-page>.line,#log-page>#selected{max-width:650px;margin-inline:auto}
+#log-page .home-picker{background:var(--canvas);border:1px solid var(--edge)}
+#quick-moves button{padding:10px 14px;color:var(--ink);font-size:16px}
+#quick-moves button small{display:block;color:#576459;font-size:12px;font-weight:400;margin-top:3px}
+#quick-moves button:hover,.plan-item:hover{background:var(--soft-accent)}
+#exercise-form .wheel-shell::before{background:var(--soft-accent)}
+.wheel [aria-selected=true]{color:var(--accent)}
+#save,#add-entry,#edit-date,.sheet button.dark{background:var(--accent);border-color:var(--accent);color:white}
+#session-note{padding:9px 0;margin-block:8px;border-top:1px solid var(--edge)}
+#session-note summary,#sync-options summary{width:fit-content;cursor:pointer;padding:5px 0}
+#home-save-state:not(:empty){background:var(--canvas);border-radius:20px;padding:3px 9px}
+#plan-list{gap:10px;margin-top:18px}
+#plan-list .plan-item{border:1px solid var(--edge);border-radius:14px;padding:12px;gap:12px;min-width:0}
+#plan-list .plan-item::after{content:'›';font-size:23px;color:var(--accent)}
+#plan-list .illustration{width:62px;height:55px;border-radius:8px}
+#plan-list .last-performance{color:var(--accent);font-size:12px;margin-top:4px;overflow-wrap:anywhere}
+.calendar-toolbar,.month-actions{display:flex;align-items:center;gap:6px}
+.calendar-toolbar{justify-content:space-between;gap:8px;margin-top:18px;padding-top:16px;border-top:1px solid var(--edge)}
+#count{padding:0;margin:2px 0 0;font-size:13px}
+#count strong{font-size:15px;color:var(--accent)}
+#month{font-size:19px}.month-actions button,#calendar-plan{border:1px solid var(--edge);border-radius:10px;background:var(--surface);min-width:40px}
+.calendar{gap:5px;margin:18px 0 0}
+.calendar button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:58px;border-radius:10px;font-variant-numeric:tabular-nums}
+.calendar button[data-selected]{outline:1px solid var(--accent);outline-offset:-1px}
+.calendar button.done{background:var(--soft-accent)!important;color:var(--accent);font-weight:650}
+.calendar button[aria-current=date]{text-underline-offset:3px}
+.calendar button.done .mark{width:auto;height:12px;font-size:11px;border:0;color:var(--accent);line-height:1;margin:0}
+.calendar .mark:empty{display:none}
+#day-exercises li:last-child{border-bottom:0}
+.tabs button[aria-pressed=true]{background:var(--soft-accent);color:var(--accent);border-radius:12px}
+.tabs button{color:#59615a}
+@media(min-width:721px){
+ main{padding-top:24px;padding-bottom:48px}
+ header{margin:0;padding:0;border:0;min-height:50px;justify-content:flex-start;gap:18px}
+ .tabs{position:static;justify-content:flex-end;gap:3px;margin:-46px 0 22px auto;width:fit-content;padding:4px;background:#fff;border:1px solid var(--edge);border-radius:14px}
+ .tabs button{width:auto;flex-direction:row;gap:5px;padding:5px 13px;min-height:34px}
+ .tabs button span{font-size:17px;line-height:1}
+ #plan-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:720px){
+ main{padding-top:15px;padding-bottom:calc(95px + env(safe-area-inset-bottom))}
+ .tabs{gap:8px;padding:6px 12px calc(6px + env(safe-area-inset-bottom));border-color:var(--edge)}
+ .tabs button{min-height:47px}
+ .tabs button span{font-size:20px;line-height:22px}
+ #quick-moves{gap:7px}
+ #log-page .home-picker,#log-page #exercise-form{padding:12px}
+ .calendar{gap:4px 2px}
+ .calendar button{font-size:16px;height:48px}
+}
 </style>
 <main>
 <header><h1>力量训练</h1><small id="today"></small></header>
 <nav class="tabs" aria-label="主导航"><button id="open-log" aria-pressed="true"><span aria-hidden="true">＋</span>训练</button><button id="open-plans" aria-pressed="false"><span aria-hidden="true">☷</span>计划</button><button id="open-checkins" aria-pressed="false"><span aria-hidden="true">▦</span>打卡</button></nav>
 <div class="layout">
 <section id="checkin-page" aria-labelledby="cal-title" hidden>
-<h2 id="cal-title">训练打卡</h2>
-<button type="button" id="calendar-plan" style="margin-top:10px">查看训练计划</button>
-<div class="line" style="margin-top:10px"><button id="prev" aria-label="上个月">‹</button><strong id="month"></strong><button id="next" aria-label="下个月">›</button></div>
-<p class="legend" id="count"></p>
+<div class="line"><h2 id="cal-title">训练打卡</h2><button type="button" id="calendar-plan">查看计划</button></div>
+<div class="calendar-toolbar"><div><strong id="month"></strong><p class="legend" id="count"></p></div>
+<div class="month-actions"><button id="this-month" hidden>本月</button><button id="prev" aria-label="上个月">‹</button><button id="next" aria-label="下个月">›</button></div></div>
 <div class="calendar" id="calendar"></div>
 </section>
 <section id="log-page" class="editor" aria-labelledby="editor-title">
@@ -137,7 +193,7 @@ body:has(.sheet[open]){overflow:hidden}
 </form>
 <div class="home-only home-list-title"><div class="line"><h3>当天动作<span id="home-count"></span></h3><span id="home-save-state" role="status"></span></div></div>
 <ul id="entries"></ul>
-<label>本次备注<textarea id="note" rows="2" maxlength="2000" placeholder="训练感受、降重原因等"></textarea></label>
+<details id="session-note"><summary>本次备注</summary><textarea id="note" aria-label="本次备注" rows="2" maxlength="2000" placeholder="训练感受、降重原因等"></textarea></details>
 <button type="button" class="dark" id="save">保存当天训练</button>
 <p id="status" class="muted" role="status"></p>
 <p id="cloud-status" class="muted" role="status"></p>
@@ -150,8 +206,7 @@ body:has(.sheet[open]){overflow:hidden}
 </section>
 </div>
 <section class="plan" id="plan-page" hidden>
-<div class="line"><h2>训练计划</h2><select id="plan" aria-label="查看计划" style="width:auto"><option>A</option><option>B</option></select></div>
-<p class="muted" id="schedule" style="margin-top:5px"></p>
+<div class="line"><h2>训练计划</h2><select id="plan" aria-label="查看计划" style="width:auto"><option value="A">A 计划</option><option value="B">B 计划</option></select></div>
 <div id="plan-list" class="plan-list"></div>
 </section>
 </main>
@@ -246,6 +301,7 @@ function renderCalendar() {
   $('today').textContent = today + ' 周' + days[dateAt(today).getUTCDay()];
   const [year, number] = month.split('-').map(Number);
   $('month').textContent = year + ' 年 ' + number + ' 月';
+  $('this-month').hidden = month === today.slice(0,7);
   const count = Object.values(sessions).filter(record =>
     record.date.startsWith(month + '-') && hasTraining(record)
   ).length;
@@ -275,6 +331,7 @@ function renderCalendar() {
     grid.append(button);
   }
   if (daySheet.open && !logDraft) renderDaySummary();
+  if (!$('plan-page').hidden) renderPlan();
 }
 const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
 function createWheel(id, values, format = String) {
@@ -429,6 +486,7 @@ function loadEditorDate(iso, moveMonth = false) {
   const record = sessions[iso];
   draft = (record?.exercises || []).slice();
   $('note').value = record?.note || '';
+  $('session-note').open = Boolean($('note').value);
   hasChanges = false;
   $('status').textContent = '';
   renderEditorDate();
@@ -446,7 +504,16 @@ function applyPlan([name,,weight,reps,sets]) {
   setsWheel.set(sets);
   setWeight(weight ?? 0);
 }
-function planItems(type, onPick) {
+function previousExercise(name) {
+  let latest = null;
+  for (const record of Object.values(sessions)) {
+    if (record.date > today || (latest && record.date <= latest.date)) continue;
+    const items = record.exercises.filter(item => item.name === name);
+    if (items.length) latest = {date:record.date,items};
+  }
+  return latest;
+}
+function planItems(type, onPick, showHistory = false) {
   return plans[type].map((entry,index) => {
     const [name,scheme] = entry;
     const row = text(onPick ? 'button' : 'div','');
@@ -456,7 +523,16 @@ function planItems(type, onPick) {
     icon.setAttribute('aria-hidden','true');
     icon.style.backgroundPosition = (index*100/3) + '% ' + (type === 'A' ? 0 : 100) + '%';
     const label = text('span',name);
-    label.append(text('small',scheme));
+    label.append(text('small','计划 ' + scheme));
+    if (showHistory) {
+      const last = previousExercise(name);
+      if (last) {
+        const weights = [...new Set(last.items.map(item => weightLabel(item.weight)))];
+        const history = text('small','上次 ' + last.date.slice(5).replace('-','/') + ' · ' + weights.join(' / '));
+        history.className = 'last-performance';
+        label.append(history);
+      }
+    }
     row.append(icon,label);
     if (onPick) {
       row.type = 'button';
@@ -469,6 +545,7 @@ function renderQuickMoves() {
   $('quick-plan').value = $('plan').value;
   $('quick-moves').replaceChildren(...plans[$('plan').value].map(entry => {
     const button = text('button',entry[0]);
+    button.append(text('small',entry[1]));
     button.type = 'button';
     button.onclick = () => {
       applyPlan(entry);
@@ -483,13 +560,13 @@ $('quick-plan').onchange = () => {
 };
 function renderPlan() {
   renderQuickMoves();
-  $('schedule').textContent = '按当天实际训练选择 A 或 B，也可以填写其他动作。';
   $('plan-list').replaceChildren(...planItems($('plan').value,entry => {
+    if ((movement || $('exercise-note').value) && !confirm('替换正在填写的动作？')) return;
     openPage('log');
     resetForm();
     applyPlan(entry);
     $('movement').focus();
-  }));
+  },true));
 }
 const planSheet = $('plan-sheet');
 let picking = false;
@@ -583,7 +660,7 @@ $('edit-date').onclick = () => {
   if ($('save').disabled) return;
   logDraft = {
     date:selected, dirty:editorDirty(), draft, hasChanges, editing, movement,
-    note:$('note').value, exerciseNote:$('exercise-note').value,
+    note:$('note').value, noteOpen:$('session-note').open, exerciseNote:$('exercise-note').value,
     wheelValues:wheels.map(wheel => wheel.value()), status:$('status').textContent
   };
   daySheet.setAttribute('data-editing','');
@@ -615,6 +692,7 @@ function closeDay() {
       $('add-entry').textContent = editing < 0 ? '添加动作' : '更新动作';
       renderDraft();
     }
+    $('session-note').open = previous.noteOpen || Boolean($('note').value);
     $('status').textContent = previous.status;
   }
   daySheet.close();
@@ -636,6 +714,12 @@ function moveMonth(delta) {
   month = date.toISOString().slice(0,7);
   renderCalendar();
 }
+$('this-month').onclick = () => {
+  month = today.slice(0,7);
+  calendarDate = today;
+  renderCalendar();
+  $('calendar').querySelector('[aria-current=date]')?.focus({preventScroll:true});
+};
 $('prev').onclick = () => moveMonth(-1);
 $('next').onclick = () => moveMonth(1);
 $('go-today').onclick = () => choose(today);
@@ -680,10 +764,7 @@ function saveLocalEdit(record) {
   return true;
 }
 $('save').onclick = async () => {
-  if (movement) {
-    if (logDraft) { $('status').textContent = '请先添加或更新正在填写的动作。'; return; }
-    stageExercise();
-  }
+  if (movement) stageExercise();
   if (!draft.length && !sessions[selected]) { $('status').textContent = '请先添加至少一个动作。'; return; }
   if (selected > today) { $('status').textContent = '训练完成后才可保存到日历。'; return; }
   const record = {...sessions[selected],date:selected,exercises:draft.slice(),note:$('note').value.trim()};
@@ -856,6 +937,7 @@ function openPage(page) {
   for (const name of ['log','plans','checkins']) {
     $('open-' + name).setAttribute('aria-pressed',String(page === name));
   }
+  if (page === 'plans') renderPlan();
   if (page === 'checkins') renderCalendar();
   else if (page === 'log') {
     for (const wheel of wheels) wheel.align();
