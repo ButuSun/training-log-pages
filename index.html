@@ -126,6 +126,7 @@ const workerApi = 'https://butusun-training-api.sunburgerbo.workers.dev';
 const workerPasswordKey = 'strength-log-cloud-password-session';
 let cloudPassword = sessionStorage.getItem(workerPasswordKey) || '';
 let cloudBusy = false;
+let cloudSyncPromise = null;
 const chinaDate = new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'});
 const dateAt = iso => new Date(iso + 'T00:00:00Z');
 let today = chinaDate.format(new Date());
@@ -483,21 +484,40 @@ function saveLocalEdit(record) {
     localStorage.setItem(editsKey,JSON.stringify(next));
   } catch {
     $('status').textContent = '浏览器保存失败。';
-    return;
+    return false;
   }
   localEdits = next;
   sessions = {...sessions,[record.date]:record};
   hasChanges = false;
   renderCalendar();
-  $('status').textContent = '已保存到此浏览器，等待云端同步。';
-  if (cloudPassword) void syncPendingEdits();
+  $('status').textContent = '已保存到此浏览器，准备上传云端。';
+  return true;
 }
-$('save').onclick = () => {
+$('save').onclick = async () => {
   if (movement) { $('status').textContent = '请先添加或更新正在填写的动作。'; return; }
   if (!draft.length && !sessions[selected]) { $('status').textContent = '请先添加至少一个动作。'; return; }
   if (selected > today) { $('status').textContent = '训练完成后才可保存到日历。'; return; }
   const record = {...sessions[selected],date:selected,exercises:draft.slice(),note:$('note').value.trim()};
-  saveLocalEdit(record);
+  if (!saveLocalEdit(record)) return;
+  $('save').disabled = true;
+  $('save').textContent = '正在同步...';
+  $('status').textContent = '正在上传 GitHub...';
+  try {
+    if (!cloudPassword) {
+      await connectCloud();
+      if (!cloudPassword) {
+        $('status').textContent = '已保存在本机，连接云端后会自动补传。';
+        return;
+      }
+    }
+    const success = await syncPendingEdits();
+    $('status').textContent = success && !Object.hasOwn(localEdits,record.date)
+      ? '✓ 已保存并同步到 GitHub'
+      : '已保存到本机，云端同步待重试。';
+  } finally {
+    $('save').disabled = false;
+    $('save').textContent = '保存当天训练';
+  }
 };
 $('export').onclick = () => {
   const url = URL.createObjectURL(new Blob([JSON.stringify({sessions:Object.values(sessions)},null,2)],{type:'application/json'}));
@@ -530,25 +550,39 @@ function mergeCloudRecords(data) {
   else renderCalendar();
 }
 async function syncPendingEdits(){
-  if(cloudBusy||!cloudPassword||!navigator.onLine)return;
-  cloudBusy=true;
-  try{
-    const remote=await cloudRequest('/api/history');
-    mergeCloudRecords(remote);
-    const entries=Object.entries(localEdits);
-    for(const [date,record] of entries){
-      await cloudRequest('/api/session',{method:'PUT',body:JSON.stringify(record)});
-      if(JSON.stringify(localEdits[date])===JSON.stringify(record)){
-        delete localEdits[date];
-        localStorage.setItem(editsKey,JSON.stringify(localEdits));
+  if(!cloudPassword || !navigator.onLine)return false;
+  // 等正在执行的同步完成，避免点击保存时被自动刷新跳过。
+  if(cloudSyncPromise) {
+    const previous = await cloudSyncPromise;
+    if(!Object.keys(localEdits).length)return previous;
+    if(!previous)return false;
+  }
+  const operation=(async()=>{
+    cloudBusy=true;
+    try{
+      const remote=await cloudRequest('/api/history');
+      mergeCloudRecords(remote);
+      // 逐条写入，避免覆盖其他设备的历史记录。
+      while(Object.keys(localEdits).length){
+        const [date,record]=Object.entries(localEdits)[0];
+        await cloudRequest('/api/session',{method:'PUT',body:JSON.stringify(record)});
+        if(JSON.stringify(localEdits[date])===JSON.stringify(record)){
+          delete localEdits[date];
+          localStorage.setItem(editsKey,JSON.stringify(localEdits));
+        }
       }
-    }
-    const updated=await cloudRequest('/api/history');
-    mergeCloudRecords(updated);
-    $('cloud-status').textContent=Object.keys(localEdits).length?'还有记录待同步':'云端已同步';
-    if(entries.length)$('status').textContent='训练记录已写入 GitHub。';
-  }catch(e){$('cloud-status').textContent='同步失败，本机记录已保留：'+e.message}
-  finally{cloudBusy=false}
+      const updated=await cloudRequest('/api/history');
+      mergeCloudRecords(updated);
+      $('cloud-status').textContent='✓ 云端已同步';
+      return true;
+    }catch(e){
+      $('cloud-status').textContent='同步失败，本机记录已保留：'+e.message;
+      return false;
+    }finally{cloudBusy=false}
+  })();
+  cloudSyncPromise=operation;
+  try{return await operation}
+  finally{if(cloudSyncPromise===operation)cloudSyncPromise=null}
 }
 async function connectCloud(){
   if(cloudBusy)return;
