@@ -2,6 +2,7 @@
   "sessions": [
     {
       "date": "2026-10-22",
+      "note": "",
       "exercises": [
         {
           "name": "深蹲",
@@ -35,11 +36,11 @@
           "rpe": null,
           "note": ""
         }
-      ],
-      "note": ""
+      ]
     },
     {
       "date": "2026-10-24",
+      "note": "其余动作在不同笔记中有出入，此处保留一致的组次。",
       "exercises": [
         {
           "name": "哈克深蹲",
@@ -65,11 +66,11 @@
           "rpe": null,
           "note": ""
         }
-      ],
-      "note": "其余动作在不同笔记中有出入，此处保留一致的组次。"
+      ]
     },
     {
       "date": "2026-10-27",
+      "note": "",
       "exercises": [
         {
           "name": "实力举",
@@ -119,11 +120,11 @@
           "rpe": null,
           "note": ""
         }
-      ],
-      "note": ""
+      ]
     },
     {
       "date": "2026-10-30",
+      "note": "",
       "exercises": [
         {
           "name": "实力举",
@@ -181,11 +182,11 @@
           "rpe": null,
           "note": ""
         }
-      ],
-      "note": ""
+      ]
     },
     {
       "date": "2026-11-04",
+      "note": "",
       "exercises": [
         {
           "name": "箱式深蹲",
@@ -219,11 +220,11 @@
           "rpe": null,
           "note": ""
         }
-      ],
-      "note": ""
+      ]
     },
     {
       "date": "2026-11-07",
+      "note": "划船在不同健身房，杠铃杆重不确定，不作为后续调重参考。",
       "exercises": [
         {
           "name": "哈克深蹲",
@@ -273,17 +274,17 @@
           "rpe": null,
           "note": ""
         }
-      ],
-      "note": "划船在不同健身房，杠铃杆重不确定，不作为后续调重参考。"
+      ]
     },
     {
       "date": "2026-11-10",
-      "exercises": [],
       "note": "放松训练",
-      "type": "recovery"
+      "type": "recovery",
+      "exercises": []
     },
     {
       "date": "2026-11-12",
+      "note": "",
       "exercises": [
         {
           "name": "深蹲",
@@ -317,24 +318,16 @@
           "rpe": null,
           "note": ""
         }
-      ],
-      "note": ""
+      ]
     },
     {
       "date": "2026-11-14",
-      "exercises": [
-        {
-          "name": "深蹲",
-          "weight": 26.25,
-          "reps": 8,
-          "sets": 3,
-          "rpe": null
-        }
-      ],
-      "note": ""
+      "note": "",
+      "exercises": []
     },
     {
       "date": "2026-11-15",
+      "note": "下次硬拉应该触地。",
       "exercises": [
         {
           "name": "硬拉",
@@ -384,8 +377,45 @@
           "rpe": null,
           "note": "太重了，手拿不住。"
         }
-      ],
-      "note": "下次硬拉应该触地。"
+      ]
+    },
+    {
+      "date": "2026-11-17",
+      "note": "",
+      "exercises": [
+        {
+          "name": "深蹲",
+          "weight": 40,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "卧推",
+          "weight": 40,
+          "reps": 8,
+          "sets": 3,
+          "rpe": 8,
+          "note": ""
+        },
+        {
+          "name": "山羊挺身",
+          "weight": 0,
+          "reps": 12,
+          "sets": 2,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "杠铃划船",
+          "weight": 30,
+          "reps": 10,
+          "sets": 3,
+          "rpe": 8,
+          "note": ""
+        }
+      ]
     }
   ]
 }
