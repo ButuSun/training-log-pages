@@ -35,7 +35,7 @@ body{background:#fff}main{max-width:880px;padding:30px 28px 120px}header{margin-
 .entry-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 #entries .entry-actions button{margin:0;min-height:36px;padding:4px 10px}
 #entries button:disabled{opacity:.4;cursor:default}
-#entries button.remove{color:#a02929}
+#entries button.remove{color:#333}
 #cloud-status{max-width:650px;margin:0 auto}
 .sheet{box-sizing:border-box;width:min(100%,540px);max-height:88dvh;margin:auto auto 0;border:0;border-radius:24px 24px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));color:inherit;box-shadow:0 12px 48px #0003;overscroll-behavior:contain}
 .sheet::backdrop{background:#0005}
@@ -77,21 +77,21 @@ body:has(.sheet[open]){overflow:hidden}
 #log-page{max-width:650px;margin-inline:auto}
 .home-only{display:none}
 #log-page .home-only{display:block}
-#log-page .home-picker{padding:16px;border-radius:16px;background:#f6f6f3}
+#log-page .home-picker{padding:16px;border-radius:16px;background:#f6f6f6}
 .home-picker .line{margin-bottom:12px}
 .home-picker select{width:auto;background:white;padding:7px 12px;font-size:14px}
 #quick-moves{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-#quick-moves button{border:1px solid #e3e3de;border-radius:10px;text-align:left;padding:10px 12px;font-weight:600}
+#quick-moves button{border:1px solid #e3e3e3;border-radius:10px;text-align:left;padding:10px 12px;font-weight:600}
 #quick-moves button:focus-visible,#quick-moves button:hover{border-color:#666}
 #other-move{margin-top:8px;background:transparent;border:0;padding:4px 0;color:#555}
 #log-page #training-editor:not(.has-movement) #exercise-form,
 #log-page .has-movement .home-picker{display:none}
-#log-page #exercise-form{padding:16px;border:1px solid #e1e1dc;border-radius:16px}
+#log-page #exercise-form{padding:16px;border:1px solid #e1e1e1;border-radius:16px}
 #log-page #exercise-form .form-grid{margin:12px 0}
 #exercise-form .form-actions{display:flex;gap:8px;margin-top:12px}
 .form-actions button{flex:1;min-height:44px}
 #add-entry{background:#222;border-color:#222;color:#fff}
-#cancel-entry{border:0;background:#efefeb}
+#cancel-entry{border:0;background:#efefef}
 #log-page .home-list-title{margin-top:22px}
 .home-list-title h3{margin:0;font-size:17px}
 #home-count,#home-save-state{color:#666;font-size:14px;font-weight:400}
@@ -104,7 +104,7 @@ body:has(.sheet[open]){overflow:hidden}
 #log-page #save:disabled{opacity:.5}
 #day-sheet .form-actions #cancel-entry{display:none}
 
-:root{--surface:#fff;--canvas:#f5f6f3;--edge:#dfe3dc;--ink:#202820;--accent:#2c614c;--soft-accent:#e8f1e9}
+:root{color-scheme:light;accent-color:#171717;--surface:#fff;--canvas:#f5f5f5;--edge:#dedede;--ink:#202020;--accent:#171717;--soft-accent:#ebebeb}
 body{background:var(--canvas);color:var(--ink)}
 main{max-width:860px;padding-inline:clamp(14px,3vw,30px)}
 header{align-items:center;border-bottom:1px solid var(--edge);padding:0 2px 14px;margin-bottom:18px}
@@ -114,7 +114,7 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 #log-page #training-editor,#log-page>.line,#log-page>#selected{max-width:650px;margin-inline:auto}
 #log-page .home-picker{background:var(--canvas);border:1px solid var(--edge)}
 #quick-moves button{padding:10px 14px;color:var(--ink);font-size:16px}
-#quick-moves button small{display:block;color:#576459;font-size:12px;font-weight:400;margin-top:3px}
+#quick-moves button small{display:block;color:#595959;font-size:12px;font-weight:400;margin-top:3px}
 #quick-moves button:hover,.plan-item:hover{background:var(--soft-accent)}
 #exercise-form .wheel-shell::before{background:var(--soft-accent)}
 .wheel [aria-selected=true]{color:var(--accent)}
@@ -135,13 +135,13 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 .calendar{gap:5px;margin:18px 0 0}
 .calendar button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:58px;border-radius:10px;font-variant-numeric:tabular-nums}
 .calendar button[data-selected]{outline:1px solid var(--accent);outline-offset:-1px}
-.calendar button.done{background:var(--soft-accent)!important;color:var(--accent);font-weight:650}
+.calendar button.done{background:var(--accent)!important;color:white;font-weight:650}
 .calendar button[aria-current=date]{text-underline-offset:3px}
-.calendar button.done .mark{width:auto;height:12px;font-size:11px;border:0;color:var(--accent);line-height:1;margin:0}
+.calendar button.done .mark{width:auto;height:12px;font-size:11px;border:0;color:inherit;line-height:1;margin:0}
 .calendar .mark:empty{display:none}
 #day-exercises li:last-child{border-bottom:0}
-.tabs button[aria-pressed=true]{background:var(--soft-accent);color:var(--accent);border-radius:12px}
-.tabs button{color:#59615a}
+.tabs button[aria-pressed=true]{background:var(--accent);color:white;border-radius:12px}
+.tabs button{color:#595959}
 @media(min-width:721px){
  main{padding-top:24px;padding-bottom:48px}
  header{margin:0;padding:0;border:0;min-height:50px;justify-content:flex-start;gap:18px}
@@ -160,6 +160,8 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
  .calendar{gap:4px 2px}
  .calendar button{font-size:16px;height:48px}
 }
+
+.illustration{filter:grayscale(1)}
 </style>
 <main>
 <header><h1>力量训练</h1><small id="today"></small></header>
