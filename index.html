@@ -73,6 +73,36 @@ body:has(.sheet[open]){overflow:hidden}
 #day-sheet .wheel{height:120px;padding:40px 0}
 #day-sheet .wheel-shell::before{inset:40px 0}
 @media(max-width:720px){#day-sheet:not([data-editing]){margin:auto;border-radius:20px}}
+
+#log-page{max-width:650px;margin-inline:auto}
+.home-only{display:none}
+#log-page .home-only{display:block}
+#log-page .home-picker{padding:16px;border-radius:16px;background:#f6f6f3}
+.home-picker .line{margin-bottom:12px}
+.home-picker select{width:auto;background:white;padding:7px 12px;font-size:14px}
+#quick-moves{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#quick-moves button{border:1px solid #e3e3de;border-radius:10px;text-align:left;padding:10px 12px;font-weight:600}
+#quick-moves button:focus-visible,#quick-moves button:hover{border-color:#666}
+#other-move{margin-top:8px;background:transparent;border:0;padding:4px 0;color:#555}
+#log-page #training-editor:not(.has-movement) #exercise-form,
+#log-page .has-movement .home-picker{display:none}
+#log-page #exercise-form{padding:16px;border:1px solid #e1e1dc;border-radius:16px}
+#log-page #exercise-form .form-grid{margin:12px 0}
+#exercise-form .form-actions{display:flex;gap:8px;margin-top:12px}
+.form-actions button{flex:1;min-height:44px}
+#add-entry{background:#222;border-color:#222;color:#fff}
+#cancel-entry{border:0;background:#efefeb}
+#log-page .home-list-title{margin-top:22px}
+.home-list-title h3{margin:0;font-size:17px}
+#home-count,#home-save-state{color:#666;font-size:14px;font-weight:400}
+#home-count{margin-left:8px}
+#log-page #entries{margin:4px 0 12px}
+#log-page #entries:empty{display:none}
+#log-page #entries li{margin:0;padding:10px 0}
+#log-page #status,#log-page #cloud-status{min-height:0;font-size:14px}
+#log-page details summary{font-size:14px;color:#555}
+#log-page #save:disabled{opacity:.5}
+#day-sheet .form-actions #cancel-entry{display:none}
 </style>
 <main>
 <header><h1>力量训练</h1><small id="today"></small></header>
@@ -89,6 +119,11 @@ body:has(.sheet[open]){overflow:hidden}
 <div class="line"><h2 id="editor-title">记录训练</h2><button id="go-today">回到今天</button></div>
 <p id="selected" class="muted" style="margin:5px 0 10px"></p>
 <div id="training-editor">
+<div class="home-only home-picker">
+  <div class="line"><strong>选择动作</strong><select id="quick-plan" aria-label="快捷动作计划"><option value="A">A 计划</option><option value="B">B 计划</option></select></div>
+  <div id="quick-moves"></div>
+  <button type="button" id="other-move" aria-haspopup="dialog">其他动作 ›</button>
+</div>
 <form id="exercise-form">
 <button type="button" id="movement" aria-haspopup="dialog">选择动作</button>
 <div class="form-grid">
@@ -98,17 +133,19 @@ body:has(.sheet[open]){overflow:hidden}
 <div><span class="wheel-label" id="rpe-label">RPE</span><div class="wheel-shell"><div id="rpe" class="wheel" role="listbox" tabindex="0" aria-labelledby="rpe-label"></div></div></div>
 </div>
 <label style="margin-top:10px">动作备注<textarea id="exercise-note" rows="2" maxlength="2000" placeholder="记录这个动作的感受或调整"></textarea></label>
-<button type="submit" id="add-entry" disabled>添加动作</button>
+<div class="form-actions"><button type="button" id="cancel-entry">取消</button><button type="submit" id="add-entry" disabled>添加动作</button></div>
 </form>
+<div class="home-only home-list-title"><div class="line"><h3>当天动作<span id="home-count"></span></h3><span id="home-save-state" role="status"></span></div></div>
 <ul id="entries"></ul>
 <label>本次备注<textarea id="note" rows="2" maxlength="2000" placeholder="训练感受、降重原因等"></textarea></label>
 <button type="button" class="dark" id="save">保存当天训练</button>
 <p id="status" class="muted" role="status"></p>
 <p id="cloud-status" class="muted" role="status"></p>
+<details id="sync-options"><summary>同步设置</summary>
 <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
 <button type="button" id="cloud-connect">连接云端</button>
 <button type="button" id="cloud-sync">同步待上传记录</button>
-</div>
+</div></details>
 </div>
 </section>
 </div>
@@ -205,6 +242,7 @@ function hasTraining(record) {
   return Boolean(record?.exercises.length || (record?.type === 'recovery' && record.note));
 }
 function renderCalendar() {
+  renderHomeState();
   $('today').textContent = today + ' 周' + days[dateAt(today).getUTCDay()];
   const [year, number] = month.split('-').map(Number);
   $('month').textContent = year + ' 年 ' + number + ' 月';
@@ -294,6 +332,12 @@ function setWeight(weight) {
 }
 function setMovement(name) {
   movement = name;
+  trainingEditor.classList.toggle('has-movement',Boolean(name));
+  if (name) {
+    for (const wheel of wheels) wheel.align();
+    $('status').textContent = '';
+  }
+  renderHomeState();
   $('movement').textContent = name || '选择动作';
   $('add-entry').disabled = !name;
 }
@@ -305,7 +349,16 @@ function moveExercise(from, to) {
   hasChanges = true;
   renderDraft();
 }
+function renderHomeState() {
+  $('home-count').textContent = draft.length + ' 项';
+  let state = '';
+  if (hasChanges || movement) state = '未保存';
+  else if (Object.hasOwn(localEdits,selected)) state = '本机已保存 · 待同步';
+  else if (sessions[selected]) state = '已保存';
+  $('home-save-state').textContent = state;
+}
 function renderDraft() {
+  renderHomeState();
   $('entries').replaceChildren(...draft.map((item,index) => {
     const li = exerciseRow(item);
     const actions = text('div','');
@@ -384,6 +437,7 @@ function loadEditorDate(iso, moveMonth = false) {
   renderCalendar();
 }
 function renderEditorDate() {
+  $('go-today').hidden = selected === today;
   $('selected').textContent = selected + ' 周' + days[dateAt(selected).getUTCDay()];
 }
 function applyPlan([name,,weight,reps,sets]) {
@@ -411,7 +465,24 @@ function planItems(type, onPick) {
     return row;
   });
 }
+function renderQuickMoves() {
+  $('quick-plan').value = $('plan').value;
+  $('quick-moves').replaceChildren(...plans[$('plan').value].map(entry => {
+    const button = text('button',entry[0]);
+    button.type = 'button';
+    button.onclick = () => {
+      applyPlan(entry);
+      $('movement').focus({preventScroll:true});
+    };
+    return button;
+  }));
+}
+$('quick-plan').onchange = () => {
+  $('plan').value = $('quick-plan').value;
+  renderPlan();
+};
 function renderPlan() {
+  renderQuickMoves();
   $('schedule').textContent = '按当天实际训练选择 A 或 B，也可以填写其他动作。';
   $('plan-list').replaceChildren(...planItems($('plan').value,entry => {
     openPage('log');
@@ -453,6 +524,11 @@ function openPlan(isPicking, trigger) {
   planSheet.showModal();
   $('close-plan').focus();
 }
+$('other-move').onclick = event => openPlan(true,event.currentTarget);
+$('cancel-entry').onclick = () => {
+  resetForm();
+  $('quick-moves').querySelector('button').focus();
+};
 $('movement').onclick = event => openPlan(true,event.currentTarget);
 $('calendar-plan').onclick = event => openPlan(false,event.currentTarget);
 $('sheet-type').onchange = renderSheet;
@@ -468,7 +544,8 @@ planSheet.addEventListener('click',event => {
 });
 planSheet.addEventListener('close',() => {
   planSheet.classList.remove('closing');
-  sheetTrigger?.focus({preventScroll:true});
+  if (sheetTrigger === $('other-move') && movement) $('movement').focus({preventScroll:true});
+  else sheetTrigger?.focus({preventScroll:true});
 });
 $('custom-form').onsubmit = event => {
   event.preventDefault();
@@ -563,10 +640,12 @@ $('prev').onclick = () => moveMonth(-1);
 $('next').onclick = () => moveMonth(1);
 $('go-today').onclick = () => choose(today);
 $('plan').onchange = renderPlan;
-$('note').oninput = () => {hasChanges = true;};
-$('exercise-form').onsubmit = event => {
-  event.preventDefault();
-  if (!movement) return;
+$('note').oninput = () => {
+  $('status').textContent = '';
+  hasChanges = true;
+  renderHomeState();
+};
+function stageExercise() {
   const entry = {
     name:movement,weight:weightWheel.value(),reps:repsWheel.value(),sets:setsWheel.value(),
     rpe:rpeWheel.value(),note:$('exercise-note').value.trim()
@@ -577,7 +656,13 @@ $('exercise-form').onsubmit = event => {
   hasChanges = true;
   resetForm();
   renderDraft();
-  $('status').textContent = isNew ? '动作已添加。' : '动作已更新。';
+  $('status').textContent = entry.name + (isNew ? '已添加' : '已更新') + '，待保存。';
+}
+$('exercise-form').onsubmit = event => {
+  event.preventDefault();
+  if (!movement) return;
+  stageExercise();
+  if (!logDraft) $('quick-moves').querySelector('button').focus({preventScroll:true});
 };
 function saveLocalEdit(record) {
   const next = {...localEdits,[record.date]:record};
@@ -595,7 +680,10 @@ function saveLocalEdit(record) {
   return true;
 }
 $('save').onclick = async () => {
-  if (movement) { $('status').textContent = '请先添加或更新正在填写的动作。'; return; }
+  if (movement) {
+    if (logDraft) { $('status').textContent = '请先添加或更新正在填写的动作。'; return; }
+    stageExercise();
+  }
   if (!draft.length && !sessions[selected]) { $('status').textContent = '请先添加至少一个动作。'; return; }
   if (selected > today) { $('status').textContent = '训练完成后才可保存到日历。'; return; }
   const record = {...sessions[selected],date:selected,exercises:draft.slice(),note:$('note').value.trim()};
@@ -613,10 +701,13 @@ $('save').onclick = async () => {
       }
     }
     const success = await syncPendingEdits();
-    $('status').textContent = success && !Object.hasOwn(localEdits,record.date)
-      ? '✓ 已保存并同步到 GitHub'
-      : '已保存到本机，云端同步待重试。';
+    if (success && !Object.hasOwn(localEdits,record.date)) {
+      $('status').textContent = editorDirty() ? '上次保存已同步，当前修改待保存。' : '✓ 已保存并同步到 GitHub';
+    } else {
+      $('status').textContent = '已保存到本机，云端同步待重试。';
+    }
   } finally {
+    renderHomeState();
     $('save').disabled = false;
     $('close-day').disabled = false;
     $('save').textContent = '保存当天训练';
@@ -753,6 +844,7 @@ function refreshToday() {
   const current = chinaDate.format(new Date());
   if (current === today) return;
   today = current;
+  renderEditorDate();
   renderCalendar();
 }
 document.addEventListener('visibilitychange',refreshToday);
