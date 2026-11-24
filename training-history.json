@@ -416,6 +416,52 @@
           "note": ""
         }
       ]
+    },
+    {
+      "date": "2026-11-24",
+      "note": "",
+      "exercises": [
+        {
+          "name": "硬拉",
+          "weight": 30,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": "上下角度不知道对不对"
+        },
+        {
+          "name": "实力举",
+          "weight": 25,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": "身体晃动幅度不知道对不对"
+        },
+        {
+          "name": "分腿蹲",
+          "weight": 5,
+          "reps": 8,
+          "sets": 1,
+          "rpe": 8,
+          "note": ""
+        },
+        {
+          "name": "分腿蹲",
+          "weight": 7.5,
+          "reps": 8,
+          "sets": 1,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "高位下拉",
+          "weight": 40,
+          "reps": 8,
+          "sets": 3,
+          "rpe": 8.5,
+          "note": ""
+        }
+      ]
     }
   ]
 }
