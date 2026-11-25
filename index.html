@@ -162,18 +162,23 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 }
 
 .illustration{filter:grayscale(1)}
+#record-today{width:100%;min-height:50px;margin-top:22px;border-radius:12px}
+#resume-draft{width:100%;margin-top:10px;background:#f5f5f5;border:0}
+#draft-status{font-size:14px;margin:8px 0;color:#555}
 </style>
 <main>
 <header><h1>力量训练</h1><small id="today"></small></header>
-<nav class="tabs" aria-label="主导航"><button id="open-log" aria-pressed="true"><span aria-hidden="true">＋</span>训练</button><button id="open-plans" aria-pressed="false"><span aria-hidden="true">☷</span>计划</button><button id="open-checkins" aria-pressed="false"><span aria-hidden="true">▦</span>打卡</button></nav>
+<nav class="tabs" aria-label="主导航"><button id="open-checkins" aria-pressed="true"><span aria-hidden="true">▦</span>日历</button><button id="open-log" aria-pressed="false"><span aria-hidden="true">＋</span>记录训练</button><button id="open-plans" aria-pressed="false"><span aria-hidden="true">☷</span>计划</button></nav>
 <div class="layout">
-<section id="checkin-page" aria-labelledby="cal-title" hidden>
-<div class="line"><h2 id="cal-title">训练打卡</h2><button type="button" id="calendar-plan">查看计划</button></div>
+<section id="checkin-page" aria-labelledby="cal-title">
+<div class="line"><h2 id="cal-title">训练日历</h2><button type="button" id="calendar-plan">查看计划</button></div>
 <div class="calendar-toolbar"><div><strong id="month"></strong><p class="legend" id="count"></p></div>
 <div class="month-actions"><button id="this-month" hidden>本月</button><button id="prev" aria-label="上个月">‹</button><button id="next" aria-label="下个月">›</button></div></div>
 <div class="calendar" id="calendar"></div>
+<button type="button" class="dark" id="record-today">记录今天</button>
+<button type="button" id="resume-draft" hidden></button>
 </section>
-<section id="log-page" class="editor" aria-labelledby="editor-title">
+<section id="log-page" class="editor" aria-labelledby="editor-title" hidden>
 <div class="line"><h2 id="editor-title">记录训练</h2><button id="go-today">回到今天</button></div>
 <p id="selected" class="muted" style="margin:5px 0 10px"></p>
 <div id="training-editor">
@@ -197,6 +202,7 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 <ul id="entries"></ul>
 <details id="session-note"><summary>本次备注</summary><textarea id="note" aria-label="本次备注" rows="2" maxlength="2000" placeholder="训练感受、降重原因等"></textarea></details>
 <button type="button" class="dark" id="save">保存当天训练</button>
+<p id="draft-status" role="status"></p>
 <p id="status" class="muted" role="status"></p>
 <p id="cloud-status" class="muted" role="status"></p>
 <details id="sync-options"><summary>同步设置</summary>
@@ -246,7 +252,21 @@ const editsKey = 'strength-log-web-edits';
 const legacyQueueKey = 'strength-log-github-pending';
 const workerApi = 'https://butusun-training-api.sunburgerbo.workers.dev';
 const workerPasswordKey = 'strength-log-cloud-password-session';
-let cloudPassword = sessionStorage.getItem(workerPasswordKey) || '';
+const persistentPasswordKey = 'strength-log-cloud-password';
+let cloudPassword = '';
+try {
+  cloudPassword = localStorage.getItem(persistentPasswordKey) || sessionStorage.getItem(workerPasswordKey) || '';
+  if (cloudPassword) localStorage.setItem(persistentPasswordKey,cloudPassword);
+} catch {
+  try { cloudPassword = sessionStorage.getItem(workerPasswordKey) || ''; } catch {}
+}
+const draftKey = 'strength-log-editor-drafts-v1';
+let editorDrafts = {};
+let draftsReady = false;
+try {
+  const saved = JSON.parse(localStorage.getItem(draftKey) || '{}');
+  if (saved && typeof saved === 'object' && !Array.isArray(saved)) editorDrafts = saved;
+} catch {}
 let cloudBusy = false;
 let cloudSyncPromise = null;
 const chinaDate = new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'});
@@ -345,6 +365,7 @@ function createWheel(id, values, format = String) {
     index = Math.max(0, Math.min(values.length - 1, next));
     wheel.children[index].setAttribute('aria-selected','true');
     wheel.setAttribute('aria-activedescendant',wheel.children[index].id);
+    if (draftsReady) queueMicrotask(persistEditorDraft);
   }
   function align(smooth = false) {
     wheel.scrollTo({top:index * rowHeight,behavior:smooth && !motionPreference.matches ? 'smooth' : 'instant'});
@@ -475,7 +496,7 @@ function editorDirty() {
   return Boolean(hasChanges || movement || $('exercise-note').value);
 }
 function choose(iso, moveMonth = true) {
-  if (editorDirty() && !confirm('这一天还有未保存的修改，切换日期？')) return false;
+  if (!persistEditorDraft()) return false;
   loadEditorDate(iso, moveMonth);
   return true;
 }
@@ -493,6 +514,7 @@ function loadEditorDate(iso, moveMonth = false) {
   $('status').textContent = '';
   renderEditorDate();
   resetForm();
+  restoreEditorDraft(iso);
   renderDraft();
   renderCalendar();
 }
@@ -660,6 +682,7 @@ function openDay(iso) {
 }
 $('edit-date').onclick = () => {
   if ($('save').disabled) return;
+  if (!persistEditorDraft()) return;
   logDraft = {
     date:selected, dirty:editorDirty(), draft, hasChanges, editing, movement,
     note:$('note').value, noteOpen:$('session-note').open, exerciseNote:$('exercise-note').value,
@@ -675,7 +698,7 @@ $('edit-date').onclick = () => {
 };
 function closeDay() {
   if (logDraft && $('save').disabled) return;
-  if (logDraft && editorDirty() && !confirm('关闭后将丢弃未保存的修改，确定关闭？')) return;
+  if (logDraft && !persistEditorDraft()) return;
   if (logDraft) {
     const previous = logDraft;
     $('log-page').append(trainingEditor);
@@ -761,6 +784,7 @@ function saveLocalEdit(record) {
   localEdits = next;
   sessions = {...sessions,[record.date]:record};
   hasChanges = false;
+  persistEditorDraft();
   renderCalendar();
   $('status').textContent = '已保存到此浏览器，准备上传云端。';
   return true;
@@ -803,7 +827,11 @@ async function cloudRequest(path,options={}) {
     cache:'no-store',signal:AbortSignal.timeout(20000)
   });
   const payload=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(payload.error||'HTTP '+response.status);
+  if(!response.ok) {
+    const error = new Error(payload.error||'HTTP '+response.status);
+    error.status = response.status;
+    throw error;
+  }
   return payload;
 }
 function mergeCloudRecords(data) {
@@ -857,19 +885,24 @@ async function syncPendingEdits(){
 }
 async function connectCloud(){
   if(cloudBusy)return;
-  const password=prompt('请输入 Cloudflare Worker 的 APP_PASSWORD（仅保存本次浏览器会话）');
+  const password=prompt('请输入云端密码，验证后会在此浏览器保持登录');
   if(password===null)return;
   if(!password){$('cloud-status').textContent='密码不能为空';return}
+  const previousPassword = cloudPassword;
   cloudPassword=password;
   try{
     const remote=await cloudRequest('/api/history');
-    sessionStorage.setItem(workerPasswordKey,password);
+    try {
+      localStorage.setItem(persistentPasswordKey,password);
+      sessionStorage.setItem(workerPasswordKey,password);
+    } catch {
+      $('status').textContent='浏览器禁止保存登录信息，关闭后可能需要重新登录。';
+    }
     mergeCloudRecords(remote);
     $('cloud-connect').textContent='重新验证云端';
     await syncPendingEdits();
   }catch(e){
-    cloudPassword='';
-    sessionStorage.removeItem(workerPasswordKey);
+    cloudPassword=previousPassword;
     $('cloud-status').textContent='云端连接失败：'+e.message;
   }
 }
@@ -933,6 +966,7 @@ function refreshToday() {
 document.addEventListener('visibilitychange',refreshToday);
 setInterval(refreshToday,30000);
 function openPage(page) {
+  persistEditorDraft();
   $('checkin-page').hidden = page !== 'checkins';
   $('log-page').hidden = page !== 'log';
   $('plan-page').hidden = page !== 'plans';
@@ -946,12 +980,85 @@ function openPage(page) {
   }
   window.scrollTo({top:0,behavior:'instant'});
 }
+// Keep unfinished actions and notes separately from saved training records.
+function editorSnapshot() {
+  return {
+    date:selected, draft:structuredClone(draft), hasChanges, editing, movement,
+    note:$('note').value, noteOpen:$('session-note').open,
+    exerciseNote:$('exercise-note').value,
+    wheelValues:wheels.map(wheel => wheel.value()), updatedAt:Date.now()
+  };
+}
+function renderDraftLink() {
+  const pending = Object.values(editorDrafts).filter(item => item && /^\d{4}-\d{2}-\d{2}$/.test(item.date));
+  pending.sort((a,b) => b.updatedAt - a.updatedAt);
+  const latest = pending[0];
+  $('resume-draft').hidden = !latest;
+  if (latest) {
+    $('resume-draft').textContent = '继续填写 ' + latest.date + ' 的草稿';
+    $('resume-draft').onclick = () => {
+      if (choose(latest.date)) openPage('log');
+    };
+  }
+}
+function persistEditorDraft() {
+  if (!draftsReady) return true;
+  if (editorDirty()) editorDrafts[selected] = editorSnapshot();
+  else delete editorDrafts[selected];
+  try {
+    localStorage.setItem(draftKey,JSON.stringify(editorDrafts));
+    $('draft-status').textContent = editorDirty() ? '草稿已自动保留，记得保存当天训练。' : '';
+    renderDraftLink();
+    return true;
+  } catch {
+    $('draft-status').textContent = '草稿自动保存失败，请先保存当天训练再退出。';
+    return false;
+  }
+}
+function restoreEditorDraft(iso) {
+  const saved = editorDrafts[iso];
+  $('draft-status').textContent = '';
+  if (!saved || saved.date !== iso || !Array.isArray(saved.draft) ||
+      !Array.isArray(saved.wheelValues) || saved.wheelValues.length !== 4) return;
+  draft = structuredClone(saved.draft);
+  hasChanges = Boolean(saved.hasChanges);
+  editing = Number.isInteger(saved.editing) && saved.editing >= 0 && saved.editing < draft.length ? saved.editing : -1;
+  setMovement(typeof saved.movement === 'string' ? saved.movement : '');
+  wheels.forEach((wheel,index) => wheel.set(saved.wheelValues[index]));
+  $('note').value = saved.note || '';
+  $('session-note').open = Boolean(saved.noteOpen || saved.note);
+  $('exercise-note').value = saved.exerciseNote || '';
+  $('add-entry').textContent = editing < 0 ? '添加动作' : '更新动作';
+  $('draft-status').textContent = '已恢复未保存的草稿，可以继续填写。';
+}
+// Save after handlers finish so every click, wheel change and note is captured.
+for (const event of ['click','input','change','keydown']) {
+  document.addEventListener(event,() => queueMicrotask(persistEditorDraft));
+}
+window.addEventListener('beforeunload',event => {
+  persistEditorDraft();
+  if (!editorDirty() && !logDraft?.dirty) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
+window.addEventListener('pagehide',persistEditorDraft);
+document.addEventListener('visibilitychange',() => {
+  if (document.hidden) persistEditorDraft();
+});
+$('record-today').onclick = () => {
+  refreshToday();
+  if (choose(today)) openPage('log');
+};
 $('open-log').onclick = () => openPage('log');
 $('open-plans').onclick = () => openPage('plans');
 $('open-checkins').onclick = () => openPage('checkins');
 renderPlan();
 choose(today);
+draftsReady = true;
+renderDraftLink();
+openPage('checkins');
 refreshPublicRecords();
 if(cloudPassword){$('cloud-connect').textContent='重新验证云端';void syncPendingEdits()}
 </script>
 </html>
+
