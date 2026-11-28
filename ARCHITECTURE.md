@@ -16,6 +16,12 @@
 - `manifest.webmanifest` 存在，但当前 `index.html` 未发现对它的引用。
 - 本次仅进行代码读取和文档整理，没有修改业务代码、训练数据或网页交互。
 
+## 每日计划与实际记录
+
+`index.html` 引用 `coach.js`、`coach.css`。日历公告进入 `#coach-page`，开始训练将计划快照保存在当天草稿中，`#coach-editor` 复用原有动作表单及滚轮。只有确认过的动作才进入实际记录。上传经既有 Worker 回读核对后，才移除本地队列并在日历签到。
+
+根目录 `daily-coach.json` 使用 `{schemaVersion:1, plans:[...]}`。按日期追加不可变版本，每版有 date、version、planId、generatedAt、type、status、summary、items。status 为 training、recovery 或 completed。训练项有唯一 id、name、suggestedWeight（kg，可空，0 为自重）、reps、sets、technicalNote。动作名关联真实历史，曲线按日期取同名动作的最高实际重量，最多五次。历史记录新增可选 session.planId 和 exercise.planId、planItemId、suggestedWeight。历史文件继续沿用已有镜像任务。
+
 ## 2. 仓库文件地图
 
 | 路径 | 当前职责 / 状态 | 维护说明 |
@@ -273,7 +279,7 @@ training-log-pages/
 │       ├── training-api.js        # Worker API 请求
 │       └── sync.js                # 本地/云端合并和同步
 ├── data/
-│   └── daily-coach.json           # 未来每日计划数据（需另行设计）
+│   └── daily-coach.json           # 现行文件在仓库根目录
 ├── training-history.json          # 公开训练历史镜像
 ├── manifest.webmanifest
 ├── android-update.json

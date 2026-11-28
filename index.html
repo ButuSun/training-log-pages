@@ -222,6 +222,7 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 @media(min-width:721px){#entry-sheet{margin:auto}}
 
 </style>
+<link rel="stylesheet" href="./coach.css">
 <main>
 <header>
 <h1>力量训练</h1>
@@ -238,6 +239,7 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 <div class="layout">
 <section id="checkin-page" aria-labelledby="cal-title">
 <div class="line page-heading"><h2 id="cal-title">训练日历</h2><button type="button" id="calendar-plan">查看计划</button></div>
+<button id="coach-banner" aria-controls="coach-page"><span id="coach-banner-label">今日训练 · 读取中</span></button>
 <div class="calendar-toolbar"><div><strong id="month"></strong><p class="legend" id="count"></p></div>
 <div class="month-actions"><button id="this-month" hidden>本月</button><button id="prev" aria-label="上个月">‹</button><button id="next" aria-label="下个月">›</button></div></div>
 <div class="calendar" id="calendar"></div>
@@ -250,6 +252,7 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 <section id="log-page" class="editor" aria-label="记录训练" hidden>
 <div class="line page-heading"><div class="home-list-heading"><h2>记录当天</h2><span id="home-count"></span></div><span id="home-save-state" role="status"></span></div>
 <div id="training-editor">
+<div id="coach-editor" hidden></div>
 <ul id="entries"></ul>
 <p id="empty-log">今天还没有动作记录</p>
 <details id="session-note"><summary>本次备注</summary><textarea id="note" aria-label="本次备注" rows="2" maxlength="2000" placeholder="训练感受、降重原因等"></textarea></details>
@@ -262,6 +265,11 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 <section class="plan" id="plan-page" hidden>
 <div class="line"><h2>训练计划</h2><select id="plan" aria-label="查看计划" style="width:auto"><option value="A">A 计划</option><option value="B">B 计划</option></select></div>
 <div id="plan-list" class="plan-list"></div>
+</section>
+<section id="coach-page" aria-labelledby="coach-title" hidden>
+<header><div><small id="coach-date"></small><h2 id="coach-title">今日训练</h2></div><div class="iron-art" role="img" aria-label="哑铃插画"></div></header>
+<p id="coach-summary"></p><div id="coach-items"></div><button id="coach-retry" hidden>重新读取</button>
+<button id="coach-start" class="dark" hidden>开始今天训练</button>
 </section>
 </main>
 <dialog id="sync-dialog" class="sheet" aria-labelledby="sync-title" aria-describedby="sync-detail">
@@ -313,6 +321,7 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 <button type="submit" class="dark">使用这个动作</button>
 </form>
 </dialog>
+<script src="./coach.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const plans = {
@@ -397,8 +406,11 @@ function renderCalendar() {
   const [year, number] = month.split('-').map(Number);
   $('month').textContent = year + ' 年 ' + number + ' 月';
   $('this-month').hidden = month === today.slice(0,7);
+  if (!$('checkin-page').hidden && Object.keys(localEdits).length) {
+    $('calendar-draft-status').textContent = Object.keys(localEdits).sort().at(-1)+' 本机已保存 · 待同步';
+  }
   const count = Object.values(sessions).filter(record =>
-    record.date.startsWith(month + '-') && hasTraining(record)
+    !Object.hasOwn(localEdits,record.date) && record.date.startsWith(month + '-') && hasTraining(record)
   ).length;
   $('count').replaceChildren(
     month === today.slice(0,7) ? '本月打卡' : '当月打卡',
@@ -411,20 +423,22 @@ function renderCalendar() {
   const total = new Date(Date.UTC(year, number, 0)).getUTCDate();
   for (let day = 1; day <= total; day++) {
     const iso = month + '-' + String(day).padStart(2,'0');
-    const marker = hasTraining(sessions[iso]) ? '✓' : '';
+    const pending = Object.hasOwn(localEdits,iso);
+    const marker = pending ? '·' : hasTraining(sessions[iso]) ? '✓' : '';
     const button = text('button',String(day));
     button.dataset.date = iso;
     button.setAttribute('aria-haspopup','dialog');
-    if (marker) button.classList.add('done');
+    if (marker) button.classList.add(pending ? 'pending-day' : 'done');
     if (iso === calendarDate) button.setAttribute('data-selected','');
     if (iso === today) button.setAttribute('aria-current','date');
-    button.setAttribute('aria-label',iso + (marker ? ' 已打卡' : ''));
+    button.setAttribute('aria-label',iso + (pending ? ' 本机已保存，待同步' : marker ? ' 已打卡' : ''));
     const mark = text('span',marker);
     mark.className = 'mark';
     button.append(mark);
     button.onclick = () => openDay(iso);
     grid.append(button);
   }
+  if (!$('coach-page').hidden) renderCoach();
   if (daySheet.open) renderDaySummary();
   if (!$('plan-page').hidden) renderPlan();
 }
@@ -749,6 +763,7 @@ function bindWorkoutGesture(surface,item,items,position,moveItem,swipe) {
   });
 }
 function renderDraft() {
+  renderCoachEditor();
   renderHomeState();
   const groups = groupEntries();
   $('entries').replaceChildren(...groups.map((indices,groupIndex) => {
@@ -869,6 +884,7 @@ function loadEditorDate(iso, moveMonth = false) {
     calendarDate = iso;
   }
   const record = sessions[iso];
+  activeCoach = coachVersions.find(p => p.date === iso && p.planId === record?.planId) || null;
   draft = (record?.exercises || []).slice();
   $('note').value = record?.note || '';
   $('session-note').open = Boolean($('note').value);
@@ -1089,6 +1105,8 @@ function stageExercise() {
     name:movement,weight:weightWheel.value(),reps:repsWheel.value(),sets:setsWheel.value(),
     rpe:rpeWheel.value(),note:$('exercise-note').value.trim()
   };
+  const planned = activeCoach?.items.find(item => item.name === movement);
+  if (planned) Object.assign(entry,{planId:activeCoach.planId,planItemId:planned.id,suggestedWeight:planned.suggestedWeight});
   const isNew = editing < 0;
   if (isNew) draft.push(entry);
   else draft[editing] = {...draft[editing],...entry};
@@ -1119,7 +1137,7 @@ function saveLocalEdit(record) {
     return false;
   }
   localEdits = next;
-  if (cloudPassword) setCloudStatus('pending','训练记录已保存在本机，等待上传。');
+  setCloudStatus('pending','训练记录已保存在本机，等待上传。');
   sessions = {...sessions,[record.date]:record};
   hasChanges = false;
   persistEditorDraft();
@@ -1132,7 +1150,12 @@ $('save').onclick = async () => {
   if (!draft.length && !sessions[selected]) { $('status').textContent = '请先添加至少一个动作。'; return; }
   if (selected > today) { $('status').textContent = '训练完成后才可保存到日历。'; return; }
   const record = {...sessions[selected],date:selected,exercises:draft.slice(),note:$('note').value.trim()};
+  if (activeCoach) record.planId = activeCoach.planId;
   if (!saveLocalEdit(record)) return;
+  calendarDate = record.date;
+  month = record.date.slice(0,7);
+  openPage('checkins');
+  $('calendar-draft-status').textContent = '本机已保存 · 待同步';
   $('save').disabled = true;
 
   $('save').textContent = '正在同步...';
@@ -1191,6 +1214,7 @@ async function syncPendingEdits(){
     const previous = await cloudSyncPromise;
     if(!Object.keys(localEdits).length)return previous;
     if(!previous)return false;
+    return syncPendingEdits();
   }
   const operation=(async()=>{
     cloudBusy=true;
@@ -1198,16 +1222,25 @@ async function syncPendingEdits(){
       const remote=await cloudRequest('/api/history');
       mergeCloudRecords(remote);
       // 逐条写入，避免覆盖其他设备的历史记录。
+      const confirmed = [];
+      let updated = remote;
       while(Object.keys(localEdits).length){
         const [date,record]=Object.entries(localEdits)[0];
         await cloudRequest('/api/session',{method:'PUT',body:JSON.stringify(record)});
+        updated=await cloudRequest('/api/history');
+        const saved = updated.sessions?.find(s=>s.date===date);
+        if(!matchesSavedRecord(record,saved)) throw Error('云端回读与本机记录不一致');
         if(JSON.stringify(localEdits[date])===JSON.stringify(record)){
-          delete localEdits[date];
-          localStorage.setItem(editsKey,JSON.stringify(localEdits));
+          const remaining = {...localEdits};
+          delete remaining[date];
+          localStorage.setItem(publicCacheKey,JSON.stringify(Object.fromEntries(updated.sessions.map(s=>[s.date,s]))));
+          localStorage.setItem(editsKey,JSON.stringify(remaining));
+          localEdits = remaining;
+          confirmed.push(date);
         }
       }
-      const updated=await cloudRequest('/api/history');
       mergeCloudRecords(updated);
+      for (const date of confirmed) showReceipt(date);
       setCloudStatus('synced','云端已同步。');
       return true;
     }catch(e){
@@ -1313,6 +1346,8 @@ function refreshToday() {
   const current = chinaDate.format(new Date());
   if (current === today) return;
   today = current;
+  publishedCoach = null;
+  void fetchCoach();
   renderHeaderDate();
   renderCalendar();
 }
@@ -1321,6 +1356,8 @@ setInterval(refreshToday,30000);
 function openPage(page) {
   persistEditorDraft();
   const logIsOpen = page === 'log';
+  $('coach-page').hidden = page !== 'coach';
+  if (page === 'coach') renderCoach();
   $('checkin-page').hidden = page !== 'checkins';
   if (page !== 'checkins') revealDraftCancel(false);
   $('log-page').hidden = !logIsOpen;
@@ -1344,7 +1381,7 @@ function openPage(page) {
 // Keep unfinished actions and notes separately from saved training records.
 function editorSnapshot() {
   return {
-    date:selected, draft:structuredClone(draft), hasChanges, editing, movement,
+    date:selected, coach:activeCoach, draft:structuredClone(draft), hasChanges, editing, movement,
     note:$('note').value, noteOpen:$('session-note').open,
     exerciseNote:$('exercise-note').value,
     wheelValues:wheels.map(wheel => wheel.value()), updatedAt:Date.now()
@@ -1443,6 +1480,7 @@ function restoreEditorDraft(iso) {
   $('draft-status').textContent = '';
   if (!saved || saved.date !== iso || !Array.isArray(saved.draft) ||
       !Array.isArray(saved.wheelValues) || saved.wheelValues.length !== 4) return;
+  activeCoach = saved.coach || activeCoach;
   draft = structuredClone(saved.draft);
   hasChanges = Boolean(saved.hasChanges);
   editing = Number.isInteger(saved.editing) && saved.editing >= 0 && saved.editing < draft.length ? saved.editing : -1;
@@ -1470,6 +1508,13 @@ document.addEventListener('visibilitychange',() => {
 });
 $('open-plans').onclick = () => openPage('plans');
 $('open-checkins').onclick = () => openPage('checkins');
+$('coach-banner').onclick = () => {openPage('coach'); void fetchCoach();};
+$('coach-start').onclick = startCoach;
+$('coach-retry').onclick = fetchCoach;
+window.addEventListener('focus',fetchCoach);
+document.addEventListener('visibilitychange',() => { if (!document.hidden) void fetchCoach(); });
+setInterval(() => { if (!document.hidden) void fetchCoach(); },300000);
+void fetchCoach();
 renderPlan();
 choose(today);
 draftsReady = true;
@@ -1482,5 +1527,3 @@ if (cloudPassword) {
 refreshPublicRecords();
 </script>
 </html>
-
-

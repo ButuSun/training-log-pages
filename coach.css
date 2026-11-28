@@ -1,0 +1,21 @@
+#coach-banner{display:block;overflow:hidden;width:100%;margin:0 0 14px;padding:3px 12px;min-height:32px;text-align:left;background:#f5f6f4;border:0;color:#44564a;font-size:.875rem}
+#coach-banner-label{display:inline-block;animation:coach-scroll 12s ease-in-out infinite alternate}
+@keyframes coach-scroll{from{transform:translateX(0)}to{transform:translateX(22px)}}
+#coach-page{background:white;border:1px solid var(--edge);border-radius:20px;padding:clamp(18px,4vw,36px)}
+#coach-page header{display:flex;align-items:center;justify-content:space-between}
+#coach-page h2{margin:.35em 0}
+#coach-items article{padding:18px 0;border-top:1px solid var(--edge)}
+#coach-items h3{margin:0 0 6px}
+#coach-items figure{margin:10px 0 0;color:#4c6657}
+#coach-items svg{display:block;width:min(100%,300px);height:48px}
+#coach-items figcaption,#coach-date{font-size:.84rem;color:#59635c}
+#coach-summary{margin-bottom:18px}
+#coach-start{width:100%}
+#coach-editor{display:grid;gap:6px;padding:12px 0}
+#coach-editor button{text-align:left}
+#coach-editor[hidden],#coach-page[hidden]{display:none}
+.iron-art{position:relative;width:88px;height:46px;flex:none;transform:rotate(-18deg);background:linear-gradient(#57655b,#57655b) center/94% 5px no-repeat}
+.iron-art:before,.iron-art:after{content:'';position:absolute;top:7px;height:32px;width:14px;border-radius:4px;background:#33493c;box-shadow:inset -4px 0 #829486}
+.iron-art:before{left:10px}.iron-art:after{right:10px}
+#calendar .pending-day .mark{color:#666;background:transparent}
+@media(prefers-reduced-motion:reduce){#coach-banner-label{animation:none}}
