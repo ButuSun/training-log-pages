@@ -20,7 +20,7 @@
 
 `index.html` 引用 `coach.js`、`coach.css`。日历公告进入 `#coach-page`，开始训练将计划快照保存在当天草稿中，`#coach-editor` 复用原有动作表单及滚轮。只有确认过的动作才进入实际记录。上传经既有 Worker 回读核对后，才移除本地队列并在日历签到。
 
-根目录 `daily-coach.json` 使用 `{schemaVersion:1, plans:[...]}`。按日期追加不可变版本，每版有 date、version、planId、generatedAt、type、status、summary、items。status 为 training、recovery 或 completed。训练项有唯一 id、name、suggestedWeight（kg，可空，0 为自重）、reps、sets、technicalNote。动作名关联真实历史，曲线按日期取同名动作的最高实际重量，最多五次。历史记录新增可选 session.planId 和 exercise.planId、planItemId、suggestedWeight。历史文件继续沿用已有镜像任务。
+根目录 `daily-coach.json` 使用 `{schemaVersion:1, plans:[...]}`。按日期追加不可变版本，每版有 date、version、planId、generatedAt、type、status、summary、items。status 为 training、recovery 或 completed。训练项有唯一 id、name、suggestedWeight（kg，可空，0 为自重）、reps、sets、technicalNote。公告展示建议正文和当天训练动作。可选 headline 用作公告短标题。今日已完成且已发布明日计划时，公告提前展示明日建议。历史记录新增可选 session.planId 和 exercise.planId、planItemId、suggestedWeight。历史文件继续沿用已有镜像任务。
 
 ## 2. 仓库文件地图
 

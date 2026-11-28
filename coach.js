@@ -32,76 +32,26 @@ async function fetchCoach() {
   renderCoach();
 }
 
-function weightHistory(name, date) {
-  return Object.values(sessions).filter(s => s.date <= date && !localEdits[s.date])
-    .sort((a,b) => a.date.localeCompare(b.date)).flatMap(s => {
-      const weights = s.exercises.filter(e => e.name === name && Number.isFinite(e.weight)).map(e => e.weight);
-      return weights.length ? [{date:s.date, weight:Math.max(...weights)}] : [];
-    }).slice(-5);
-}
-
-function historyChart(points) {
-  const box = document.createElement('figure');
-  box.append(text('figcaption',points.length ? '每次最高实际重量（kg）' : '暂无同名动作的已同步重量记录'));
-  if (!points.length) return box;
-  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
-  const add = (tag,attrs,value) => {
-    const node = document.createElementNS(svg.namespaceURI,tag);
-    for (const [key,val] of Object.entries(attrs)) node.setAttribute(key,val);
-    if (value != null) node.textContent = value;
-    svg.append(node);
-  };
-  svg.setAttribute('viewBox','0 0 300 88');
-  svg.setAttribute('role','img');
-  svg.setAttribute('aria-label',points.map(p => p.date+' '+weightLabel(p.weight)).join('，'));
-  const weights = points.map(p => p.weight);
-  const low = Math.min(...weights), high = Math.max(...weights);
-  const coords = points.map((p,i) => ({
-    x:points.length === 1 ? 150 : 22 + 256*i/(points.length-1),
-    y:high === low ? 42 : 58-34*(p.weight-low)/(high-low)
-  }));
-  if (points.length > 1) add('polyline',{points:coords.map(p=>p.x+','+p.y).join(' '),fill:'none',stroke:'currentColor','stroke-width':2});
-  points.forEach((point,i) => {
-    const {x,y} = coords[i];
-    add('circle',{cx:x,cy:y,r:3,fill:'currentColor'});
-    add('text',{x,y:y-8,class:'chart-weight'},point.weight === 0 ? '自重' : point.weight);
-    add('text',{x,y:81,class:'chart-date'},point.date.slice(5));
-  });
-  box.append(svg);
-  return box;
-}
-
 function renderCoach() {
-  const p = currentCoach();
-  const reported = p?.status === 'completed';
+  const current = currentCoach();
+  const tomorrow = new Date(dateAt(today).getTime() + 86400000).toISOString().slice(0,10);
+  const preview = (!current || current.status === 'completed') && coachVersions.filter(p => p.date === tomorrow).at(-1);
+  const p = preview || current;
   const ready = p?.status === 'training';
-  const state = ready ? p.type+' 训练计划已生成' : reported ? p.type+' 训练已完成' :
-    p ? '今日恢复安排已生成' : coachLoadError ? '计划读取失败，点开重试' : '今日计划待生成';
-  $('coach-banner-label').textContent = '今日训练　·　'+state+'　 ›';
-  $('coach-date').textContent = today;
-  $('coach-title').textContent = state;
-  $('coach-summary').textContent = p?.summary || (coachLoadError ? '暂时无法取得计划。' : '发布后可在这里查看今天的安排。');
+  const title = p?.headline || (ready ? p.type+' 组训练' : p?.status === 'recovery' ? '按原安排恢复' : '训练建议');
+  const day = preview ? '明日建议' : '今日建议';
+  const fallback = coachLoadError ? '暂时无法读取，点开重试' : '等待发布';
+  $('coach-banner-label').textContent = day+'　·　'+(p ? p.headline || p.summary.split(/[。！？\\n]/)[0] || title : fallback);
+  $('coach-date').textContent = day+' · '+(p?.date || today);
+  $('coach-title').textContent = title;
+  $('coach-summary').textContent = p?.summary || fallback;
   $('coach-items').replaceChildren();
-  const items = reported ? [...new Set((sessions[today]?.exercises || []).map(e => e.name))].map(name=>({name})) : p?.items || [];
-  for (const item of items) {
+  for (const item of p?.items || []) {
     const row = text('article','');
-    const points = weightHistory(item.name,today);
-    const previous = points.filter(point => point.date < today).at(-1);
-    row.append(text('h3',item.name));
-    if (ready) {
-      const weight = item.suggestedWeight;
-      row.append(text('strong',(weight == null ? '重量现场确认' : weightLabel(weight))+' × '+item.reps+' 次 × '+item.sets+' 组'));
-      if (previous) {
-        const delta = weight == null ? '' : '（本次 '+(weight-previous.weight > 0 ? '+' : '')+(weight-previous.weight)+' kg）';
-        row.append(text('p','上次最高实际重量 '+weightLabel(previous.weight)+' '+delta));
-      }
-      row.append(text('p',item.technicalNote));
-    } else if (reported) {
-      row.append(text('p',sessions[today].exercises.filter(e=>e.name===item.name).map(e=>weightLabel(e.weight)+' × '+e.reps+' 次 × '+e.sets+' 组').join('，')));
-    }
-    row.append(historyChart(points)); $('coach-items').append(row);
+    row.append(text('h3',item.name),text('strong',(item.suggestedWeight == null ? '重量现场确认' : weightLabel(item.suggestedWeight))+' × '+item.reps+' 次 × '+item.sets+' 组'),text('p',item.technicalNote));
+    $('coach-items').append(row);
   }
-  $('coach-start').hidden = !ready;
+  $('coach-start').hidden = !ready || p.date !== today;
   $('coach-retry').hidden = !coachLoadError;
   $('coach-start').textContent = editorDrafts[today]?.coach || sessions[today]?.planId ? '继续记录今天训练' : '开始今天训练';
 }
