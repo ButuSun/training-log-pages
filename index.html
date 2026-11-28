@@ -36,7 +36,6 @@ body{background:#fff}main{max-width:880px;padding:30px 28px 120px}header{margin-
 #entries .entry-actions button{margin:0;min-height:36px;padding:4px 10px}
 #entries button:disabled{opacity:.4;cursor:default}
 #entries button.remove{color:#333}
-#cloud-status{max-width:650px;margin:0 auto}
 .sheet{box-sizing:border-box;width:min(100%,540px);max-height:88dvh;margin:auto auto 0;border:0;border-radius:24px 24px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));color:inherit;box-shadow:0 12px 48px #0003;overscroll-behavior:contain}
 .sheet::backdrop{background:#0005}
 .sheet[open]{animation:sheet-in .25s cubic-bezier(.22,1,.36,1) both}
@@ -99,7 +98,7 @@ body:has(.sheet[open]){overflow:hidden}
 #log-page #entries{margin:4px 0 12px}
 #log-page #entries:empty{display:none}
 #log-page #entries li{margin:0;padding:10px 0}
-#log-page #status,#log-page #cloud-status{min-height:0;font-size:14px}
+#log-page #status{min-height:0;font-size:14px}
 #log-page details summary{font-size:14px;color:#555}
 #log-page #save:disabled{opacity:.5}
 #day-sheet .form-actions #cancel-entry{display:none}
@@ -122,7 +121,10 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 .wheel [aria-selected=true]{color:var(--accent)}
 #save,#add-entry,#edit-date,.sheet button.dark{background:var(--accent);border-color:var(--accent);color:white}
 #session-note{padding:9px 0;margin-block:8px;border-top:1px solid var(--edge)}
-#session-note summary,#sync-options summary{width:fit-content;cursor:pointer;padding:5px 0}
+#session-note summary{width:fit-content;cursor:pointer;padding:5px 0}
+#sync-options{margin:0 0 10px;text-align:right;color:#555;font-size:14px}
+#sync-options summary{width:fit-content;margin-left:auto;padding:4px 0;overflow-wrap:anywhere}
+.sync-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:6px}
 #home-save-state:not(:empty){background:var(--canvas);border-radius:20px;padding:3px 9px}
 #plan-list{gap:10px;margin-top:18px}
 #plan-list .plan-item{border:1px solid var(--edge);border-radius:14px;padding:12px;gap:12px;min-width:0}
@@ -221,6 +223,13 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 <div class="calendar" id="calendar"></div>
 <button type="button" id="resume-draft" hidden></button>
 </section>
+<details id="sync-options" hidden>
+<summary><span id="cloud-status" role="status">云端未连接</span></summary>
+<div class="sync-actions">
+<button type="button" id="cloud-connect">连接云端</button>
+<button type="button" id="cloud-sync">同步待上传记录</button>
+</div>
+</details>
 <section id="log-page" class="editor" aria-label="记录训练" hidden>
 <div id="training-editor">
 <div class="home-only home-list-title"><div class="line"><h3>当天动作<span id="home-count"></span></h3><span id="home-save-state" role="status"></span></div></div>
@@ -230,12 +239,6 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 <button type="button" class="dark" id="save">保存当天训练</button>
 <p id="draft-status" role="status"></p>
 <p id="status" class="muted" role="status"></p>
-<p id="cloud-status" class="muted" role="status"></p>
-<details id="sync-options"><summary>同步设置</summary>
-<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-<button type="button" id="cloud-connect">连接云端</button>
-<button type="button" id="cloud-sync">同步待上传记录</button>
-</div></details>
 </div>
 </section>
 </div>
@@ -1126,7 +1129,7 @@ async function refreshPublicRecords() {
     sessions = merged;
     if (selectedChanged && !editorDirty() && !$('save').disabled) loadEditorDate(selected);
     else renderCalendar();
-    $('cloud-status').textContent = '';
+    $('cloud-status').textContent = '云端未连接';
   } catch {
     $('cloud-status').textContent = '暂时无法读取公开训练记录，稍后会自动重试。';
   } finally {
@@ -1151,6 +1154,7 @@ function openPage(page) {
   const logIsOpen = page === 'log';
   $('checkin-page').hidden = page !== 'checkins';
   $('log-page').hidden = !logIsOpen;
+  $('sync-options').hidden = !logIsOpen;
   $('plan-page').hidden = page !== 'plans';
   for (const name of ['plans','checkins']) {
     $('open-' + name).setAttribute('aria-pressed',String(page === name));
