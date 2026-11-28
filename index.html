@@ -237,9 +237,9 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 </div>
 </header>
 <div class="layout">
+<button id="coach-banner" aria-controls="coach-page"><span id="coach-banner-label">今日训练 · 读取中</span></button>
 <section id="checkin-page" aria-labelledby="cal-title">
 <div class="line page-heading"><h2 id="cal-title">训练日历</h2><button type="button" id="calendar-plan">查看计划</button></div>
-<button id="coach-banner" aria-controls="coach-page"><span id="coach-banner-label">今日训练 · 读取中</span></button>
 <div class="calendar-toolbar"><div><strong id="month"></strong><p class="legend" id="count"></p></div>
 <div class="month-actions"><button id="this-month" hidden>本月</button><button id="prev" aria-label="上个月">‹</button><button id="next" aria-label="下个月">›</button></div></div>
 <div class="calendar" id="calendar"></div>
@@ -1353,7 +1353,18 @@ function refreshToday() {
 }
 document.addEventListener('visibilitychange',refreshToday);
 setInterval(refreshToday,30000);
-function openPage(page) {
+function openPage(page, fromHistory = false) {
+  if (!fromHistory) {
+    if (page === 'coach' && history.state?.trainingPage !== 'coach') {
+      history.pushState({...history.state,trainingPage:'coach'},'');
+    } else if (page === 'checkins' && history.state?.trainingPage === 'coach') {
+      history.back();
+      return;
+    } else if (history.state?.trainingPage && page !== history.state.trainingPage) {
+      history.replaceState({...history.state,trainingPage:page},'');
+    }
+  }
+  $('coach-banner').hidden = page !== 'checkins';
   persistEditorDraft();
   const logIsOpen = page === 'log';
   $('coach-page').hidden = page !== 'coach';
@@ -1519,7 +1530,12 @@ renderPlan();
 choose(today);
 draftsReady = true;
 renderDraftLink();
-openPage('checkins');
+function restorePage() {
+  const saved = history.state?.trainingPage;
+  openPage(['coach','log','plans'].includes(saved) ? saved : 'checkins',true);
+}
+window.addEventListener('popstate',restorePage);
+restorePage();
 if (cloudPassword) {
   $('cloud-connect').textContent = '重新验证云端';
   setCloudStatus('pending','云端记录将在联网后同步。');

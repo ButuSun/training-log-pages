@@ -42,28 +42,32 @@ function weightHistory(name, date) {
 
 function historyChart(points) {
   const box = document.createElement('figure');
-  const label = points.map(p => p.date.slice(5) + ' · ' + weightLabel(p.weight)).join('　');
-  if (points.length > 1) {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svg.setAttribute('viewBox','0 0 260 48');
-    svg.setAttribute('aria-hidden','true');
-    const weights = points.map(p => p.weight);
-    const low = Math.min(...weights), high = Math.max(...weights);
-    const coords = points.map((p,i) => [6 + 248*i/(points.length-1),high === low ? 24 : 41-34*(p.weight-low)/(high-low)]);
-    const line = document.createElementNS(svg.namespaceURI,'polyline');
-    line.setAttribute('points',coords.map(c => c.join(',')).join(' '));
-    line.setAttribute('fill','none');
-    line.setAttribute('stroke','currentColor');
-    line.setAttribute('stroke-width','2');
-    svg.append(line);
-    for (const [x,y] of coords) {
-      const dot = document.createElementNS(svg.namespaceURI,'circle');
-      dot.setAttribute('cx',x); dot.setAttribute('cy',y); dot.setAttribute('r','3');
-      dot.setAttribute('fill','currentColor'); svg.append(dot);
-    }
-    box.append(svg);
-  }
-  box.append(text('figcaption',label ? '每次最高实重（kg）　'+label : '暂无同名动作的已同步重量记录'));
+  box.append(text('figcaption',points.length ? '每次最高实际重量（kg）' : '暂无同名动作的已同步重量记录'));
+  if (!points.length) return box;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  const add = (tag,attrs,value) => {
+    const node = document.createElementNS(svg.namespaceURI,tag);
+    for (const [key,val] of Object.entries(attrs)) node.setAttribute(key,val);
+    if (value != null) node.textContent = value;
+    svg.append(node);
+  };
+  svg.setAttribute('viewBox','0 0 300 88');
+  svg.setAttribute('role','img');
+  svg.setAttribute('aria-label',points.map(p => p.date+' '+weightLabel(p.weight)).join('，'));
+  const weights = points.map(p => p.weight);
+  const low = Math.min(...weights), high = Math.max(...weights);
+  const coords = points.map((p,i) => ({
+    x:points.length === 1 ? 150 : 22 + 256*i/(points.length-1),
+    y:high === low ? 42 : 58-34*(p.weight-low)/(high-low)
+  }));
+  if (points.length > 1) add('polyline',{points:coords.map(p=>p.x+','+p.y).join(' '),fill:'none',stroke:'currentColor','stroke-width':2});
+  points.forEach((point,i) => {
+    const {x,y} = coords[i];
+    add('circle',{cx:x,cy:y,r:3,fill:'currentColor'});
+    add('text',{x,y:y-8,class:'chart-weight'},point.weight === 0 ? '自重' : point.weight);
+    add('text',{x,y:81,class:'chart-date'},point.date.slice(5));
+  });
+  box.append(svg);
   return box;
 }
 

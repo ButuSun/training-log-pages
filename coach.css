@@ -7,7 +7,10 @@
 #coach-items article{padding:18px 0;border-top:1px solid var(--edge)}
 #coach-items h3{margin:0 0 6px}
 #coach-items figure{margin:10px 0 0;color:#4c6657}
-#coach-items svg{display:block;width:min(100%,300px);height:48px}
+#coach-items svg{display:block;width:100%;max-width:420px;height:auto;overflow:visible}
+#coach-items svg text{text-anchor:middle;font:13px system-ui,sans-serif;fill:currentColor;font-variant-numeric:tabular-nums}
+#coach-items svg .chart-weight{font-weight:600}
+#coach-items svg .chart-date{fill:#59635c}
 #coach-items figcaption,#coach-date{font-size:.84rem;color:#59635c}
 #coach-summary{margin-bottom:18px}
 #coach-start{width:100%}
