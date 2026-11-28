@@ -54,6 +54,7 @@ GitHub Pages
     │   ├── #checkin-page            ← 训练日历首页
     │   ├── #log-page                ← 当天训练记录编辑页
     │   ├── #plan-page               ← A/B 训练计划页
+    │   ├── #exercise-page           ← 动作重量趋势与历史详情
     │   ├── #sync-dialog             ← 云端同步弹窗
     │   ├── #entry-sheet             ← 动作录入弹窗
     │   ├── #day-sheet               ← 某日训练详情弹窗
@@ -105,14 +106,23 @@ GitHub Pages
 - `#plan`：A/B 计划切换。
 - `#plan-list`：计划动作列表。
 
-### 4.4 弹窗 / Sheet
+### 4.4 动作详情页
+
+主要容器：`#exercise-page`。
+
+- 从计划页点击动作进入，展示该动作的实际历史重量曲线、关键统计和历史训练记录。
+- 曲线每个训练日期取该动作当天的最高有效负重；同一天多条组次不合并，点击数据点可查看完整组次。
+- `weight: 0` 继续表示自重，`null` 表示未记录；自重记录保留在历史中，但不作为外部负重曲线的数值点。
+- 支持全部、近半年、近三月筛选；页面状态写入浏览器历史，系统返回键可回到计划页。
+
+### 4.5 弹窗 / Sheet
 
 - `#sync-dialog`：云端连接、同步状态与重试。
 - `#entry-sheet`：动作选择和录入。
 - `#day-sheet`：查看指定日期的训练及编辑入口。
 - `#plan-sheet`：选择 A/B 计划动作或自定义动作。
 
-### 4.5 页面导航
+### 4.6 页面导航
 
 当前导航由 `#open-checkins`、`#compose`、`#open-plans` 等按钮控制。记录入口与页面切换逻辑位于 `openPage` 及相邻事件绑定代码中。
 
@@ -130,6 +140,7 @@ GitHub Pages
 | 记录列表渲染 | `renderDraft`、局部 `reveal` 逻辑 | 751–846 | 渲染当天动作、行内操作、编辑状态 |
 | 编辑器状态 | `resetForm`、`editorDirty`、`loadEditorDate`、`renderHeaderDate` | 847–888 | 表单初始化、脏状态判断、加载日期记录 |
 | 计划展示与选择 | `applyPlan`、`previousExercise`、`planItems`、`renderQuickMoves`、`renderPlan`、`openPlan` | 889–1026 | A/B 计划展示、快捷动作、动作选择、自定义动作 |
+| 动作重量趋势 | `activeExercise`、`exerciseRecords`、`renderExerciseDetail`、`renderExerciseChart`、`renderExerciseSelection` | 计划展示逻辑之后 | 按动作读取真实历史、绘制 SVG 折线图、筛选时间范围并查看每次训练组次 |
 | 日期详情 | `renderDaySummary`、`openDay`、`closeDay` | 1027–1065 | 查看指定日期训练详情和编辑入口 |
 | 记录暂存与保存 | `stageExercise`、`saveLocalEdit`、保存按钮事件 | 1087–1158 | 将动作写入当天草稿、本地保存、触发上传 |
 | 云端同步 | `cloudRequest`、`mergeCloudRecords`、`syncPendingEdits`、`connectCloud`、`setCloudStatus` | 1159–1265 | Worker API 请求、合并记录、逐日上传、连接状态 |
@@ -378,3 +389,14 @@ training-log-pages/
 6. 未经用户明确同意，不进行整站重构、不删除旧实现、不更改数据协议。
 
 **总原则：先明确边界，再逐步拆分；最小读取、最小修改、最少验证，保护现有训练数据与交互。**
+
+
+## 13. 动作重量趋势详情页（2026-11-28）
+
+- 计划页动作卡片点击后进入 `#exercise-page`，不再直接跳转到动作录入流程。
+- 详情页仅分析 `sessions` 中的实际训练记录，不读取计划建议重量作为历史成绩。
+- 同一动作同一天可能有多条不同重量记录；曲线按日期取当日最高的有效外部负重，历史详情保留全部原始条目。
+- `weight: 0` 代表自重、`null` 代表未知。自重条目展示在历史详情中，不伪装成 0 kg 的外部负重曲线点。
+- 曲线由原生 SVG 绘制，无新增图表依赖；支持全部、近半年、近三月范围，并可点击点位或历史记录切换当天详情。
+- 动作详情作为独立页面加入浏览器 history state；返回键回到计划页。原有动作录入弹窗、滚轮、草稿与同步链路保持独立。
+- 当前验证范围：静态源码检查与 GitHub 文件回读；未执行浏览器交互测试或 Android WebView 实机测试。
