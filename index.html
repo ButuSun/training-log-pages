@@ -174,7 +174,13 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 }
 
 .illustration{filter:grayscale(1)}
-#resume-draft{width:100%;margin-top:10px;background:#f5f5f5;border:0}
+#draft-swipe{--draft-action-width:72px;position:relative;overflow:hidden;margin-top:10px;border-radius:10px}
+#resume-draft{position:relative;width:100%;background:#f5f5f5;border:0;touch-action:pan-y;transition:transform .2s ease}
+#draft-swipe[data-revealed] #resume-draft{transform:translateX(calc(-1 * var(--draft-action-width)))}
+#cancel-draft{position:absolute;inset:0 0 0 auto;width:var(--draft-action-width);border:0;border-radius:0;background:#a03232;color:#fff}
+#draft-swipe button:focus-visible{outline-offset:-3px}
+#calendar-draft-status:not(:empty){margin-top:8px;font-size:14px}
+@media(prefers-reduced-motion:reduce){#resume-draft{transition:none}}
 #draft-status{font-size:14px;margin:8px 0;color:#555}
 #log-page{padding-bottom:24px}
 #entry-sheet{width:min(calc(100% - 16px),510px);margin:auto auto max(8px,env(safe-area-inset-bottom));padding:0 18px 18px;border-radius:25px;max-height:88dvh;overflow:auto}
@@ -227,7 +233,11 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 <div class="calendar-toolbar"><div><strong id="month"></strong><p class="legend" id="count"></p></div>
 <div class="month-actions"><button id="this-month" hidden>本月</button><button id="prev" aria-label="上个月">‹</button><button id="next" aria-label="下个月">›</button></div></div>
 <div class="calendar" id="calendar"></div>
-<button type="button" id="resume-draft" hidden></button>
+<div id="draft-swipe" hidden>
+<button type="button" id="cancel-draft" inert>取消</button>
+<button type="button" id="resume-draft" aria-keyshortcuts="ArrowLeft" aria-controls="cancel-draft" aria-expanded="false"></button>
+</div>
+<p id="calendar-draft-status" class="muted" role="status"></p>
 </section>
 <section id="log-page" class="editor" aria-label="记录训练" hidden>
 <div class="line page-heading"><div class="home-list-heading"><h2>记录当天</h2><span id="home-count"></span></div><span id="home-save-state" role="status"></span></div>
@@ -1178,6 +1188,7 @@ function openPage(page) {
   persistEditorDraft();
   const logIsOpen = page === 'log';
   $('checkin-page').hidden = page !== 'checkins';
+  if (page !== 'checkins') revealDraftCancel(false);
   $('log-page').hidden = !logIsOpen;
   $('sync-status').hidden = !logIsOpen;
   $('plan-page').hidden = page !== 'plans';
@@ -1205,17 +1216,79 @@ function editorSnapshot() {
     wheelValues:wheels.map(wheel => wheel.value()), updatedAt:Date.now()
   };
 }
+const draftSwipe = $('draft-swipe');
+const resumeDraft = $('resume-draft');
+const cancelDraft = $('cancel-draft');
+let draftPointer = null;
+let draftSwiped = false;
+function revealDraftCancel(revealed) {
+  draftSwipe.toggleAttribute('data-revealed',revealed);
+  resumeDraft.setAttribute('aria-expanded',String(revealed));
+  cancelDraft.inert = !revealed;
+}
+resumeDraft.onpointerdown = event => {
+  if (!event.isPrimary || event.button !== 0) return;
+  draftSwiped = false;
+  draftPointer = {id:event.pointerId,x:event.clientX,y:event.clientY};
+  resumeDraft.setPointerCapture(event.pointerId);
+};
+resumeDraft.onpointerup = event => {
+  if (draftPointer?.id !== event.pointerId) return;
+  const dx = event.clientX - draftPointer.x;
+  const dy = event.clientY - draftPointer.y;
+  draftPointer = null;
+  draftSwiped = Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy) * 1.5;
+  if (draftSwiped) revealDraftCancel(dx < 0);
+};
+resumeDraft.onlostpointercapture = () => { draftPointer = null; };
+resumeDraft.onclick = event => {
+  if (draftSwiped && event.detail) {
+    draftSwiped = false;
+    return;
+  }
+  if (draftSwipe.hasAttribute('data-revealed')) {
+    revealDraftCancel(false);
+    return;
+  }
+  const date = draftSwipe.dataset.date;
+  if (date && choose(date)) openPage('log');
+};
+draftSwipe.onkeydown = event => {
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault();
+    revealDraftCancel(true);
+    cancelDraft.focus();
+  } else if (event.key === 'Escape' || event.key === 'ArrowRight') {
+    event.preventDefault();
+    revealDraftCancel(false);
+    resumeDraft.focus();
+  }
+};
+cancelDraft.onclick = () => {
+  const date = draftSwipe.dataset.date;
+  if (!date || !Object.hasOwn(editorDrafts,date) || !confirm('取消 ' + date + ' 的训练草稿？未保存的修改将被丢弃。')) return;
+  const remaining = {...editorDrafts};
+  delete remaining[date];
+  try {
+    localStorage.setItem(draftKey,JSON.stringify(remaining));
+  } catch {
+    $('calendar-draft-status').textContent = '无法取消草稿，请稍后重试。';
+    return;
+  }
+  editorDrafts = remaining;
+  if (date === selected) loadEditorDate(date);
+  $('calendar-draft-status').textContent = '';
+  renderDraftLink();
+  (draftSwipe.hidden ? $('calendar-plan') : resumeDraft).focus({preventScroll:true});
+};
 function renderDraftLink() {
   const pending = Object.values(editorDrafts).filter(item => item && /^\d{4}-\d{2}-\d{2}$/.test(item.date));
   pending.sort((a,b) => b.updatedAt - a.updatedAt);
-  const latest = pending[0];
-  $('resume-draft').hidden = !latest;
-  if (latest) {
-    $('resume-draft').textContent = '继续填写 ' + latest.date + ' 的草稿';
-    $('resume-draft').onclick = () => {
-      if (choose(latest.date)) openPage('log');
-    };
-  }
+  const date = pending[0]?.date || '';
+  if (draftSwipe.dataset.date !== date) revealDraftCancel(false);
+  draftSwipe.dataset.date = date;
+  draftSwipe.hidden = !date;
+  if (date) resumeDraft.textContent = '继续填写 ' + date + ' 的草稿';
 }
 function persistEditorDraft() {
   if (!draftsReady) return true;
