@@ -462,6 +462,68 @@
           "note": ""
         }
       ]
+    },
+    {
+      "date": "2026-11-28",
+      "note": "",
+      "exercises": [
+        {
+          "name": "卧推",
+          "weight": 40,
+          "reps": 8,
+          "sets": 2,
+          "rpe": 8,
+          "note": ""
+        },
+        {
+          "name": "卧推",
+          "weight": 45,
+          "reps": 8,
+          "sets": 1,
+          "rpe": null,
+          "note": ""
+        },
+        {
+          "name": "卧推",
+          "weight": 50,
+          "reps": 8,
+          "sets": 1,
+          "rpe": null,
+          "note": "胸也没有明显的紧绷感"
+        },
+        {
+          "name": "深蹲",
+          "weight": 50,
+          "reps": 8,
+          "sets": 3,
+          "rpe": null,
+          "note": "虽然能做，但是感觉站立起来的时候腿有点抖。并且最后一个的时候腰部有点代偿。"
+        },
+        {
+          "name": "杠铃划船",
+          "weight": 30,
+          "reps": 10,
+          "sets": 1,
+          "rpe": 8,
+          "note": ""
+        },
+        {
+          "name": "杠铃划船",
+          "weight": 35,
+          "reps": 10,
+          "sets": 2,
+          "rpe": null,
+          "note": "感觉一开始总往后跑。"
+        },
+        {
+          "name": "山羊挺身",
+          "weight": 0,
+          "reps": 12,
+          "sets": 3,
+          "rpe": null,
+          "note": ""
+        }
+      ]
     }
   ]
 }
