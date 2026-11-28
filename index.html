@@ -1047,7 +1047,7 @@ let activeExercise = '';
 let selectedExerciseDate = '';
 function exerciseRecords(name) {
   return Object.values(sessions).filter(record =>
-    record && /^\\d{4}-\\d{2}-\\d{2}$/.test(record.date) &&
+    record && /^\d{4}-\d{2}-\d{2}$/.test(record.date) &&
     record.date <= today && Array.isArray(record.exercises)
   ).map(record => {
     const items = record.exercises.filter(item => item?.name === name);
