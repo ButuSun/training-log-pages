@@ -1136,9 +1136,11 @@ function renderExerciseChart(records) {
   const points = filtered.filter(record => record.loadedPeak != null);
   if (!points.length) {
     empty.hidden = false;
-    empty.textContent = records.some(record => record.peak === 0)
-      ? '目前只有自重或未记录负重的数据，暂无外部负重曲线。历史训练记录仍保留在下方。'
-      : '目前还没有可绘制的负重数据。历史训练记录仍保留在下方。';
+    empty.textContent = records.some(record => record.loadedPeak != null)
+      ? '所选时间范围内暂无负重记录，可切换为“全部”查看历史曲线。'
+      : records.some(record => record.peak === 0)
+        ? '目前只有自重或未记录负重的数据，暂无外部负重曲线。历史训练记录仍保留在下方。'
+        : '目前还没有可绘制的负重数据。历史训练记录仍保留在下方。';
     return;
   }
   empty.hidden = true;
