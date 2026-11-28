@@ -112,6 +112,9 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 .header-meta{display:grid;justify-items:end;gap:2px}
 .header-date{display:flex;align-items:center;gap:8px;white-space:nowrap}
 #cloud-status{font:inherit;color:inherit;background:none;border:0;min-height:0;padding:0}
+#sync-confirmed,#cloud-status{display:inline-flex;align-items:center;gap:5px}
+#sync-confirmed::before,#cloud-status::before{content:"";width:6px;height:6px;border-radius:50%;background:#858585}
+#sync-confirmed::before{background:#32834e}
 #go-today{min-height:32px;padding:3px 8px;font-size:13px}
 #log-page,#plan-page,#checkin-page{width:100%;max-width:none;margin:0 auto;background:var(--surface);border:1px solid var(--edge);border-radius:20px;padding:clamp(16px,3.5vw,32px)}
 #log-page #training-editor{max-width:650px;margin-inline:auto}
