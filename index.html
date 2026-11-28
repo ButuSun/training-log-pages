@@ -202,14 +202,22 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 .exercise-card>.line{gap:8px}
 .exercise-card h4{font-size:17px;margin:0;min-width:0}
 .group-tools{display:flex;gap:5px}
-#entries .group-tools button,#entries .row-menu{margin:0;min-height:38px;padding:3px 10px;border-radius:12px}
+#entries .group-tools button{margin:0;min-height:38px;padding:3px 10px;border-radius:12px}
 .exercise-card small{font-size:13px;color:#676767}
-.work-row{border-top:1px solid #eee;padding-top:8px;margin-top:8px;scroll-margin:15px 0 155px;touch-action:pan-y}
+.work-row{--row-actions-width:112px;position:relative;overflow:hidden;border-top:1px solid #eee;margin-top:8px;scroll-margin:15px 0 155px}
 .work-row .entry-meta{font-size:15px;color:#222;line-height:1.6}
 .work-row .entry-note{color:#555}
-.row-controls{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 0}
-#entries .row-controls button{margin:0;min-height:38px;padding:4px 10px}
-#entries .remove{color:#9d3838}
+.exercise-card>.line,.row-surface{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.row-surface{position:relative;min-height:44px;padding:8px 0;background:var(--surface);transition:transform .2s ease}
+.work-row[data-revealed] .row-surface{transform:translateX(calc(-1 * var(--row-actions-width)))}
+.row-controls{position:absolute;inset:0 0 0 auto;display:flex;width:var(--row-actions-width)}
+#entries .row-controls button{flex:1;min-height:38px;margin:0;padding:4px;border-radius:0;color:#333}
+#entries .row-controls .remove{background:#a03232;color:#fff}
+.row-surface:focus-visible,.exercise-card>.line:focus-visible{outline:2px solid #151515;outline-offset:-2px}
+.work-row button:focus-visible{outline-offset:-3px}
+.workout-dragging{opacity:.55;cursor:grabbing}
+#entries .workout-drop-target{box-shadow:inset 0 0 0 2px #737373}
+@media(prefers-reduced-motion:reduce){.row-surface{transition:none}}
 .entry-flight{position:fixed;z-index:30;pointer-events:none;box-sizing:border-box;border-radius:14px;background:#242424;color:white;padding:8px 12px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;font-size:14px;transform-origin:center}
 @media(min-width:721px){#entry-sheet{margin:auto}}
 
@@ -623,16 +631,122 @@ function reorder(indices) {
   draft = reordered;
   hasChanges = true;
   renderDraft();
+  persistEditorDraft();
 }
 function shiftGroup(groups,from,to) {
   const ordered = groups.slice();
   ordered.splice(to,0,...ordered.splice(from,1));
   reorder(ordered.flat());
 }
-function shiftRow(from,to) {
+function shiftRow(indices,from,to) {
+  const ordered = indices.slice();
+  ordered.splice(to,0,...ordered.splice(from,1));
   const order = draft.map((_,index)=>index);
-  [order[from],order[to]] = [order[to],order[from]];
+  indices.forEach((index,position) => { order[index] = ordered[position]; });
   reorder(order);
+}
+function bindWorkoutGesture(surface,item,items,position,moveItem,swipe) {
+  let gesture = null;
+  let holdTimer;
+  let dropTarget;
+  let frame;
+  const latestTarget = () => items().find(node => node.contains(document.elementFromPoint(gesture.x,gesture.y)));
+  function highlight(target) {
+    if (target === dropTarget) return;
+    dropTarget?.classList.remove('workout-drop-target');
+    dropTarget = target === item ? undefined : target;
+    dropTarget?.classList.add('workout-drop-target');
+  }
+  function trackDrag() {
+    if (!surface.isConnected) { finish(); return; }
+    const top = 56;
+    const bottom = window.innerHeight - 110;
+    if (Math.abs(gesture.y - gesture.startY) > 10) {
+      if (gesture.y < top) window.scrollBy(0,-8);
+      else if (gesture.y > bottom) window.scrollBy(0,8);
+    }
+    highlight(latestTarget());
+    frame = requestAnimationFrame(trackDrag);
+  }
+  function start(id,x,y) {
+    if (gesture) return;
+    gesture = {id,x,y,startX:x,startY:y,mode:''};
+    if (items().length < 2) return;
+    holdTimer = setTimeout(() => {
+      if (!surface.isConnected) { finish(); return; }
+      gesture.mode = 'drag';
+      swipe?.(false);
+      item.classList.add('workout-dragging');
+      trackDrag();
+    },420);
+  }
+  function update(x,y) {
+    gesture.x = x;
+    gesture.y = y;
+    const dx = Math.abs(x - gesture.startX);
+    const dy = Math.abs(y - gesture.startY);
+    if (!gesture.mode && Math.max(dx,dy) > 10) {
+      clearTimeout(holdTimer);
+      gesture.mode = swipe && dx > dy * 1.35 ? 'swipe' : 'scroll';
+    }
+    return gesture.mode === 'drag' || gesture.mode === 'swipe';
+  }
+  function finish(event) {
+    clearTimeout(holdTimer);
+    cancelAnimationFrame(frame);
+    const target = event && gesture?.mode === 'drag' ? latestTarget() : null;
+    const dx = gesture ? gesture.x - gesture.startX : 0;
+    const didSwipe = event && gesture?.mode === 'swipe' && Math.abs(dx) >= 40;
+    gesture = null;
+    item.classList.remove('workout-dragging');
+    highlight(undefined);
+    if (target && target !== item) moveItem(items().indexOf(target));
+    if (didSwipe) swipe(dx < 0);
+  }
+  surface.addEventListener('touchstart',event => {
+    if (event.target.closest('button') || event.touches.length !== 1) { finish(); return; }
+    const [touch] = event.changedTouches;
+    start(touch.identifier,touch.clientX,touch.clientY);
+  },{passive:true});
+  for (const type of ['touchmove','touchend']) {
+    surface.addEventListener(type,event => {
+      const touch = Array.from(event.changedTouches).find(point => point.identifier === gesture?.id);
+      if (!touch) return;
+      if (update(touch.clientX,touch.clientY) && event.cancelable) event.preventDefault();
+      if (type === 'touchend') finish(event);
+    },{passive:false});
+  }
+  surface.addEventListener('touchcancel',() => finish());
+  surface.addEventListener('pointerdown',event => {
+    if (event.pointerType === 'touch' || event.button !== 0 || event.target.closest('button')) return;
+    start(event.pointerId,event.clientX,event.clientY);
+    surface.setPointerCapture(event.pointerId);
+  });
+  surface.addEventListener('pointermove',event => {
+    if (event.pointerType !== 'touch' && gesture?.id === event.pointerId) update(event.clientX,event.clientY);
+  });
+  surface.addEventListener('pointerup',event => {
+    if (event.pointerType === 'touch' || gesture?.id !== event.pointerId) return;
+    update(event.clientX,event.clientY);
+    finish(event);
+  });
+  surface.addEventListener('lostpointercapture',event => {
+    if (event.pointerType !== 'touch') finish();
+  });
+  surface.oncontextmenu = event => {
+    if (!event.target.closest('button')) event.preventDefault();
+  };
+  surface.tabIndex = 0;
+  surface.setAttribute('aria-keyshortcuts',swipe ? 'ArrowLeft ArrowRight Alt+ArrowUp Alt+ArrowDown' : 'Alt+ArrowUp Alt+ArrowDown');
+  surface.addEventListener('keydown',event => {
+    if (event.target !== surface || !event.altKey) return;
+    const offset = {ArrowUp:-1,ArrowDown:1}[event.key];
+    if (!offset) return;
+    event.preventDefault();
+    const to = position + offset;
+    if (to < 0 || to >= items().length) return;
+    moveItem(to,true);
+  });
 }
 function renderDraft() {
   renderHomeState();
@@ -652,34 +766,50 @@ function renderDraft() {
     tools.append(again);
     head.append(label,tools);
     card.append(head);
+    const cards = () => Array.from($('entries').children);
+    bindWorkoutGesture(head,card,cards,groupIndex,(to,focus) => {
+      shiftGroup(groups,groupIndex,to);
+      if (focus) cards()[to].querySelector('.line').focus();
+    });
     for (const [position,index] of indices.entries()) {
       const entry = draft[index];
       const row = text('div','');
       row.className = 'work-row';
       row.dataset.entry = index;
-      const line = text('div','');
-      line.className = 'line';
+      const surface = text('div','');
+      surface.className = 'row-surface';
       const meta = text('p',weightLabel(entry.weight)+' × '+entry.reps+' 次 × '+entry.sets+' 组'+
         (entry.rpe == null ? '' : ' · RPE '+entry.rpe));
       meta.className = 'entry-meta';
-      const actions = text('div','');
-      actions.className = 'row-controls';
-      actions.hidden = true;
-      const toggle = button('···',()=>reveal(actions.hidden),item.name+'第'+(position+1)+'条记录的操作');
-      toggle.className = 'row-menu';
-      toggle.setAttribute('aria-expanded','false');
-      function reveal(show) {
-        actions.hidden = !show;
-        toggle.setAttribute('aria-expanded',String(show));
-      }
-      line.append(meta,toggle);
-      row.append(line);
+      surface.append(meta);
       if (entry.note) {
         const note = text('p',entry.note);
         note.className = 'entry-note';
-        row.append(note);
+        surface.append(note);
       }
-      const edit = button('编辑',event=>fillEntry(index,false,event.currentTarget));
+      const actions = text('div','');
+      actions.className = 'row-controls';
+      actions.id = 'entry-actions-' + index;
+      actions.inert = true;
+      surface.setAttribute('aria-controls',actions.id);
+      surface.setAttribute('aria-expanded','false');
+      function reveal(show) {
+        if (show) {
+          $('entries').querySelectorAll('.work-row[data-revealed]').forEach(other => {
+            if (other === row) return;
+            other.removeAttribute('data-revealed');
+            other.querySelector('.row-controls').inert = true;
+            other.querySelector('.row-surface').setAttribute('aria-expanded','false');
+          });
+        }
+        row.toggleAttribute('data-revealed',show);
+        actions.inert = !show;
+        surface.setAttribute('aria-expanded',String(show));
+      }
+      const edit = button('编辑',event=>{
+        fillEntry(index,false,event.currentTarget);
+        if (entrySheet.open) reveal(false);
+      },'编辑'+item.name+'第'+(position+1)+'条记录');
       const remove = button('删除',()=>{
         if (!confirm('删除「'+item.name+'」的这条记录？')) return;
         draft.splice(index,1);
@@ -687,23 +817,27 @@ function renderDraft() {
         else if (editing > index) editing--;
         hasChanges = true;
         renderDraft();
-      });
+      },'删除'+item.name+'第'+(position+1)+'条记录');
       remove.className = 'remove';
       actions.append(edit,remove);
-      if (position) actions.append(button('记录上移',()=>shiftRow(index,indices[position-1])));
-      if (position+1<indices.length) actions.append(button('记录下移',()=>shiftRow(index,indices[position+1])));
-      if (groupIndex) actions.append(button('动作上移',()=>shiftGroup(groups,groupIndex,groupIndex-1)));
-      if (groupIndex+1<groups.length) actions.append(button('动作下移',()=>shiftGroup(groups,groupIndex,groupIndex+1)));
-      row.append(actions);
-      let start;
-      row.onpointerdown = event => { start = [event.clientX,event.clientY]; };
-      row.onpointercancel = () => { start = null; };
-      row.onpointerup = event => {
-        if (!start) return;
-        const dx = event.clientX-start[0];
-        if (Math.abs(dx)>48 && Math.abs(dx)>2*Math.abs(event.clientY-start[1])) reveal(dx<0);
-        start = null;
-      };
+      row.append(actions,surface);
+      const rows = () => Array.from(card.querySelectorAll('.work-row'));
+      bindWorkoutGesture(surface,row,rows,position,(to,focus) => {
+        shiftRow(indices,position,to);
+        if (focus) cards()[groupIndex].querySelectorAll('.row-surface')[to].focus();
+      },reveal);
+      row.addEventListener('keydown',event => {
+        if (event.altKey) return;
+        if (event.key === 'ArrowLeft' && event.target === surface) {
+          event.preventDefault();
+          reveal(true);
+          edit.focus();
+        } else if (event.key === 'Escape' || event.key === 'ArrowRight') {
+          event.preventDefault();
+          reveal(false);
+          surface.focus();
+        }
+      });
       card.append(row);
     }
     return card;
@@ -973,7 +1107,7 @@ $('exercise-form').onsubmit = event => {
   const target = $('entries').querySelector('[data-entry="' + index + '"]');
   target.scrollIntoView({block:'nearest',behavior:'instant'});
   animateArrival(source,target);
-  target.querySelector('button').focus({preventScroll:true});
+  target.querySelector('.row-surface').focus({preventScroll:true});
 
 };
 function saveLocalEdit(record) {
