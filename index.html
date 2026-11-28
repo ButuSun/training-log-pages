@@ -165,6 +165,42 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 #record-today{width:100%;min-height:50px;margin-top:22px;border-radius:12px}
 #resume-draft{width:100%;margin-top:10px;background:#f5f5f5;border:0}
 #draft-status{font-size:14px;margin:8px 0;color:#555}
+#entry-dock{position:fixed;z-index:19;bottom:calc(86px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:max-content;max-width:94vw}
+#compose,#record-today{border:0;border-radius:28px;background:#202020;color:#fff;font-weight:650;box-shadow:0 4px 16px #15151526}
+#compose{min-height:48px;padding:10px 24px}
+#log-page{padding-bottom:24px}
+body:has(#log-page:not([hidden])) main{padding-bottom:calc(165px + env(safe-area-inset-bottom))}
+#entry-sheet{width:min(calc(100% - 16px),510px);margin:auto auto max(8px,env(safe-area-inset-bottom));padding:0 18px 18px;border-radius:25px;max-height:88dvh;overflow:auto}
+#entry-sheet[open]{animation:none}
+#entry-sheet>.line{margin:0 0 14px}
+#compose{max-width:min(90vw,450px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#entry-sheet button,#entry-dock button{-webkit-tap-highlight-color:transparent}
+#entry-sheet .wheel{height:120px;padding:40px 0}
+#entry-sheet .wheel-shell::before{inset:40px 0}
+#entry-sheet .wheel-shell{margin-top:4px}
+#entry-sheet .form-grid{margin:12px 0 8px}
+#entry-sheet #exercise-note{min-height:44px;margin-bottom:0}
+#entry-sheet #movement{font-size:20px;padding-top:0}
+#entry-sheet #other-move{margin-top:10px}
+#sheet-grip{touch-action:none;cursor:grab;display:grid;place-items:center;height:30px}
+#sheet-grip i{width:36px;height:5px;border-radius:6px;background:#c6c6c6}
+#empty-log{margin:18px 0;padding:26px 12px;text-align:center;color:#666;background:#f7f7f7;border-radius:16px}
+#log-page #entries{display:grid;gap:12px;margin:14px 0}
+#log-page #entries>.exercise-card{border:1px solid var(--edge);padding:14px;border-radius:16px}
+.exercise-card>.line{gap:8px}
+.exercise-card h4{font-size:17px;margin:0;min-width:0}
+.group-tools{display:flex;gap:5px}
+#entries .group-tools button,#entries .row-menu{margin:0;min-height:38px;padding:3px 10px;border-radius:12px}
+.exercise-card small{font-size:13px;color:#676767}
+.work-row{border-top:1px solid #eee;padding-top:8px;margin-top:8px;scroll-margin:15px 0 155px;touch-action:pan-y}
+.work-row .entry-meta{font-size:15px;color:#222;line-height:1.6}
+.work-row .entry-note{color:#555}
+.row-controls{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 0}
+#entries .row-controls button{margin:0;min-height:38px;padding:4px 10px}
+#entries .remove{color:#9d3838}
+.entry-flight{position:fixed;z-index:30;pointer-events:none;box-sizing:border-box;border-radius:14px;background:#242424;color:white;padding:8px 12px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;font-size:14px;transform-origin:center}
+@media(min-width:721px){#entry-dock{bottom:22px}#entry-sheet{margin:auto}body:has(#log-page:not([hidden])) main{padding-bottom:95px}}
+
 </style>
 <main>
 <header><h1>力量训练</h1><small id="today"></small></header>
@@ -175,31 +211,17 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 <div class="calendar-toolbar"><div><strong id="month"></strong><p class="legend" id="count"></p></div>
 <div class="month-actions"><button id="this-month" hidden>本月</button><button id="prev" aria-label="上个月">‹</button><button id="next" aria-label="下个月">›</button></div></div>
 <div class="calendar" id="calendar"></div>
-<button type="button" class="dark" id="record-today">记录今天</button>
+<button type="button" class="dark" id="record-today" aria-haspopup="dialog">＋ 记录今天训练</button>
 <button type="button" id="resume-draft" hidden></button>
 </section>
 <section id="log-page" class="editor" aria-labelledby="editor-title" hidden>
 <div class="line"><h2 id="editor-title">记录训练</h2><button id="go-today">回到今天</button></div>
 <p id="selected" class="muted" style="margin:5px 0 10px"></p>
 <div id="training-editor">
-<div class="home-only home-picker">
-  <div class="line"><strong>选择动作</strong><select id="quick-plan" aria-label="快捷动作计划"><option value="A">A 计划</option><option value="B">B 计划</option></select></div>
-  <div id="quick-moves"></div>
-  <button type="button" id="other-move" aria-haspopup="dialog">其他动作 ›</button>
-</div>
-<form id="exercise-form">
-<button type="button" id="movement" aria-haspopup="dialog">选择动作</button>
-<div class="form-grid">
-<div><span class="wheel-label" id="weight-label">重量（kg）</span><div class="wheel-shell"><div id="wheel" class="wheel" role="listbox" tabindex="0" aria-labelledby="weight-label"></div></div></div>
-<div><span class="wheel-label" id="reps-label">次数</span><div class="wheel-shell"><div id="reps" class="wheel" role="listbox" tabindex="0" aria-labelledby="reps-label"></div></div></div>
-<div><span class="wheel-label" id="sets-label">组数</span><div class="wheel-shell"><div id="sets" class="wheel" role="listbox" tabindex="0" aria-labelledby="sets-label"></div></div></div>
-<div><span class="wheel-label" id="rpe-label">RPE</span><div class="wheel-shell"><div id="rpe" class="wheel" role="listbox" tabindex="0" aria-labelledby="rpe-label"></div></div></div>
-</div>
-<label style="margin-top:10px">动作备注<textarea id="exercise-note" rows="2" maxlength="2000" placeholder="记录这个动作的感受或调整"></textarea></label>
-<div class="form-actions"><button type="button" id="cancel-entry">取消</button><button type="submit" id="add-entry" disabled>添加动作</button></div>
-</form>
 <div class="home-only home-list-title"><div class="line"><h3>当天动作<span id="home-count"></span></h3><span id="home-save-state" role="status"></span></div></div>
 <ul id="entries"></ul>
+<p id="empty-log">今天还没有动作记录</p>
+<div id="entry-dock"><button type="button" class="dark" id="compose" aria-haspopup="dialog">＋ 记录动作</button></div>
 <details id="session-note"><summary>本次备注</summary><textarea id="note" aria-label="本次备注" rows="2" maxlength="2000" placeholder="训练感受、降重原因等"></textarea></details>
 <button type="button" class="dark" id="save">保存当天训练</button>
 <p id="draft-status" role="status"></p>
@@ -218,6 +240,26 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 <div id="plan-list" class="plan-list"></div>
 </section>
 </main>
+<dialog id="entry-sheet" class="sheet" aria-labelledby="entry-title">
+<div id="sheet-grip" aria-hidden="true"><i></i></div>
+<div class="line"><h2 id="entry-title">记录动作</h2><button id="fold-entry" type="button" autofocus>收起</button></div>
+<div class="home-picker" id="pick-movement">
+  <div class="line"><strong>选择动作</strong><select id="quick-plan" aria-label="快捷动作计划"><option value="A">A 计划</option><option value="B">B 计划</option></select></div>
+  <div id="quick-moves"></div>
+  <button type="button" id="other-move" aria-haspopup="dialog">更多动作或自定义</button>
+</div>
+<form id="exercise-form">
+<button type="button" id="movement" aria-haspopup="dialog">选择动作</button>
+<div class="form-grid">
+<div><span class="wheel-label" id="weight-label">重量（kg）</span><div class="wheel-shell"><div id="wheel" class="wheel" role="listbox" tabindex="0" aria-labelledby="weight-label"></div></div></div>
+<div><span class="wheel-label" id="reps-label">次数</span><div class="wheel-shell"><div id="reps" class="wheel" role="listbox" tabindex="0" aria-labelledby="reps-label"></div></div></div>
+<div><span class="wheel-label" id="sets-label">组数</span><div class="wheel-shell"><div id="sets" class="wheel" role="listbox" tabindex="0" aria-labelledby="sets-label"></div></div></div>
+<div><span class="wheel-label" id="rpe-label">RPE</span><div class="wheel-shell"><div id="rpe" class="wheel" role="listbox" tabindex="0" aria-labelledby="rpe-label"></div></div></div>
+</div>
+<label style="margin-top:10px">动作备注<textarea id="exercise-note" rows="2" maxlength="2000" placeholder="记录这个动作的感受或调整"></textarea></label>
+<div class="form-actions"><button type="button" id="cancel-entry">放弃填写</button><button type="submit" id="add-entry" disabled>记入当天</button></div>
+</form>
+</dialog>
 <dialog class="sheet" id="day-sheet" aria-labelledby="day-title">
 <div class="line day-header">
   <div><h2 id="day-title">当天训练</h2><small id="day-date"></small></div>
@@ -352,8 +394,13 @@ function renderCalendar() {
     button.onclick = () => openDay(iso);
     grid.append(button);
   }
-  if (daySheet.open && !logDraft) renderDaySummary();
+  if (daySheet.open) renderDaySummary();
   if (!$('plan-page').hidden) renderPlan();
+}
+let wheelDraftTimer;
+function scheduleWheelDraft() {
+  clearTimeout(wheelDraftTimer);
+  wheelDraftTimer = setTimeout(persistEditorDraft,180);
 }
 const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
 function createWheel(id, values, format = String) {
@@ -365,7 +412,7 @@ function createWheel(id, values, format = String) {
     index = Math.max(0, Math.min(values.length - 1, next));
     wheel.children[index].setAttribute('aria-selected','true');
     wheel.setAttribute('aria-activedescendant',wheel.children[index].id);
-    if (draftsReady) queueMicrotask(persistEditorDraft);
+    if (draftsReady && movement) scheduleWheelDraft();
   }
   function align(smooth = false) {
     wheel.scrollTo({top:index * rowHeight,behavior:smooth && !motionPreference.matches ? 'smooth' : 'instant'});
@@ -412,7 +459,8 @@ function setWeight(weight) {
 }
 function setMovement(name) {
   movement = name;
-  trainingEditor.classList.toggle('has-movement',Boolean(name));
+  $('pick-movement').hidden = Boolean(name);
+  $('exercise-form').hidden = !name;
   if (name) {
     for (const wheel of wheels) wheel.align();
     $('status').textContent = '';
@@ -421,72 +469,227 @@ function setMovement(name) {
   $('movement').textContent = name || '选择动作';
   $('add-entry').disabled = !name;
 }
-function moveExercise(from, to) {
-  const [item] = draft.splice(from,1);
-  draft.splice(to,0,item);
-  if (editing === from) editing = to;
-  else if (editing === to) editing = from;
-  hasChanges = true;
-  renderDraft();
+const entrySheet = $('entry-sheet');
+const compose = $('compose');
+let closingEntry = false;
+function openComposer(origin) {
+  if (entrySheet.open) return;
+  const start = origin || compose.getBoundingClientRect();
+  entrySheet.showModal();
+  entrySheet.scrollTop = 0;
+  wheels.forEach(wheel => wheel.align());
+  if (!motionPreference.matches && start.width) {
+    const end = entrySheet.getBoundingClientRect();
+    const dx = start.left + start.width / 2 - end.left - end.width / 2;
+    const dy = start.top + start.height / 2 - end.top - end.height / 2;
+    entrySheet.animate([
+      {transform:'translate('+dx+'px,'+dy+'px) scale(.62,.24)',opacity:.35},
+      {transform:'none',opacity:1}
+    ],{duration:320,easing:'cubic-bezier(.22,1,.36,1)'});
+  }
+}
+function foldComposer(offset = 0) {
+  if (closingEntry || !entrySheet.open) return;
+  closingEntry = true;
+  const finish = () => {
+    entrySheet.close();
+    entrySheet.style.transform = '';
+    closingEntry = false;
+    compose.focus({preventScroll:true});
+  };
+  if (motionPreference.matches) return finish();
+  entrySheet.animate([
+    {transform:'translateY('+offset+'px)'},
+    {transform:'translateY('+Math.max(offset+36,66)+'px) scale(.94)',opacity:0}
+  ],{duration:170,easing:'ease-in',fill:'backwards'}).finished.then(finish,finish);
+}
+compose.onclick = () => openComposer();
+$('fold-entry').onclick = () => foldComposer();
+entrySheet.addEventListener('cancel',event => {
+  event.preventDefault();
+  foldComposer();
+});
+entrySheet.addEventListener('click',event => {
+  if (event.target !== entrySheet) return;
+  const r = entrySheet.getBoundingClientRect();
+  if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) foldComposer();
+});
+const grip = $('sheet-grip');
+let dragStart = null;
+grip.onpointerdown = event => {
+  if (closingEntry || !event.isPrimary) return;
+  grip.setPointerCapture(event.pointerId);
+  dragStart = event.clientY;
+};
+grip.onpointermove = event => {
+  if (dragStart !== null) entrySheet.style.transform = 'translateY('+Math.max(0,event.clientY-dragStart)+'px)';
+};
+grip.onpointerup = event => {
+  if (dragStart === null) return;
+  const offset = Math.max(0,event.clientY-dragStart);
+  dragStart = null;
+  if (offset >= 48) foldComposer(offset);
+  else entrySheet.style.transform = '';
+};
+grip.onpointercancel = () => { dragStart = null; entrySheet.style.transform = ''; };
+function animateArrival(source,target) {
+  if (motionPreference.matches) return;
+  const end = target.getBoundingClientRect();
+  const flight = text('div',target.querySelector('.entry-meta').textContent);
+  flight.className = 'entry-flight';
+  flight.setAttribute('aria-hidden','true');
+  const dx = source.left + source.width/2 - end.left - end.width/2;
+  const dy = source.top + source.height/2 - end.top - end.height/2;
+  Object.assign(flight.style,{left:end.left+'px',top:end.top+'px',width:end.width+'px',height:end.height+'px'});
+  document.body.append(flight);
+  flight.animate([
+    {transform:'translate('+dx+'px,'+dy+'px) scale(.6,.8)',opacity:.95},
+    {transform:'none',opacity:0}
+  ],{duration:390,easing:'cubic-bezier(.22,.8,.24,1)'}).finished.then(()=>flight.remove(),()=>flight.remove());
+  target.animate([{opacity:.3},{opacity:1}],{duration:390});
+}
+function groupEntries() {
+  const grouped = new Map();
+  for (const [index,item] of draft.entries()) {
+    if (!grouped.has(item.name)) grouped.set(item.name,[]);
+    grouped.get(item.name).push(index);
+  }
+  return [...grouped.values()];
 }
 function renderHomeState() {
-  $('home-count').textContent = draft.length + ' 项';
+  const count = new Set(draft.map(item => item.name)).size;
+  $('home-count').textContent = count ? count + ' 个动作 · ' + draft.reduce((n,item)=>n+Number(item.sets),0) + ' 组' : '';
+  $('empty-log').hidden = Boolean(count);
+  $('empty-log').textContent = selected === today ? '今天还没有动作记录' : '当天还没有动作记录';
+  compose.textContent = movement ? '继续填写 · ' + movement : '＋ 记录动作';
+  $('entry-title').textContent = editing < 0 ? '记录动作' : '编辑记录';
   let state = '';
   if (hasChanges || movement) state = '未保存';
   else if (Object.hasOwn(localEdits,selected)) state = '本机已保存 · 待同步';
   else if (sessions[selected]) state = '已保存';
   $('home-save-state').textContent = state;
+  if (!$('save').disabled) $('save').textContent = movement ? '继续填写后保存' : '保存当天训练';
+}
+function button(label,onClick,description) {
+  const el = text('button',label);
+  el.type = 'button';
+  el.onclick = onClick;
+  if (description) el.setAttribute('aria-label',description);
+  return el;
+}
+function fillEntry(index,append,trigger) {
+  if (movement && !(editing === index && !append) && !confirm('替换尚未记入的动作？')) return;
+  if (!(movement && editing === index && !append)) {
+    const item = draft[index];
+    editing = append ? -1 : index;
+    setMovement(item.name);
+    setWeight(item.weight);
+    repsWheel.set(item.reps);
+    setsWheel.set(append ? 1 : item.sets);
+    rpeWheel.set(item.rpe == null || append ? null : Number(item.rpe));
+    $('exercise-note').value = append ? '' : item.note || '';
+    $('add-entry').textContent = append ? '记入当天' : '更新记录';
+  }
+  openComposer(trigger.getBoundingClientRect());
+}
+function reorder(indices) {
+  const reordered = indices.map(index => draft[index]);
+  editing = indices.indexOf(editing);
+  draft = reordered;
+  hasChanges = true;
+  renderDraft();
+}
+function shiftGroup(groups,from,to) {
+  const ordered = groups.slice();
+  ordered.splice(to,0,...ordered.splice(from,1));
+  reorder(ordered.flat());
+}
+function shiftRow(from,to) {
+  const order = draft.map((_,index)=>index);
+  [order[from],order[to]] = [order[to],order[from]];
+  reorder(order);
 }
 function renderDraft() {
   renderHomeState();
-  $('entries').replaceChildren(...draft.map((item,index) => {
-    const li = exerciseRow(item);
-    const actions = text('div','');
-    actions.className = 'entry-actions';
-    const edit = text('button','编辑');
-    edit.onclick = () => {
-      editing = index;
-      setMovement(item.name);
-      repsWheel.set(item.reps);
-      setsWheel.set(item.sets);
-      rpeWheel.set(null);
-      if (item.rpe != null) rpeWheel.set(Number(item.rpe));
-      $('exercise-note').value = item.note ?? '';
-      setWeight(item.weight);
-      $('add-entry').textContent = '更新动作';
-      $('movement').scrollIntoView({block:'center'});
-      $('movement').focus({preventScroll:true});
-    };
-    const up = text('button','上移');
-    up.disabled = index === 0;
-    up.onclick = () => moveExercise(index,index - 1);
-    const down = text('button','下移');
-    down.disabled = index === draft.length - 1;
-    down.onclick = () => moveExercise(index,index + 1);
-    const remove = text('button','删除');
-    remove.className = 'remove';
-    remove.onclick = () => {
-      if (!confirm('确定删除「' + item.name + '」这条动作记录？')) return;
-      draft.splice(index,1);
-      if (editing === index) resetForm();
-      else if (editing > index) editing--;
-      hasChanges = true;
-      renderDraft();
-    };
-    for (const button of [edit,up,down,remove]) {
-      button.type = 'button';
-      button.setAttribute('aria-label',button.textContent + ' ' + item.name);
+  const groups = groupEntries();
+  $('entries').replaceChildren(...groups.map((indices,groupIndex) => {
+    const item = draft[indices[0]];
+    const card = text('li','');
+    card.className = 'exercise-card';
+    const head = text('div','');
+    head.className = 'line';
+    const label = text('div','');
+    const total = indices.reduce((sum,i)=>sum+Number(draft[i].sets),0);
+    label.append(text('h4',item.name),text('small','共 '+total+' 组'));
+    const again = button('＋ 记一组',event=>fillEntry(indices.at(-1),true,event.currentTarget),'继续记录'+item.name);
+    const tools = text('div','');
+    tools.className = 'group-tools';
+    tools.append(again);
+    head.append(label,tools);
+    card.append(head);
+    for (const [position,index] of indices.entries()) {
+      const entry = draft[index];
+      const row = text('div','');
+      row.className = 'work-row';
+      row.dataset.entry = index;
+      const line = text('div','');
+      line.className = 'line';
+      const meta = text('p',weightLabel(entry.weight)+' × '+entry.reps+' 次 × '+entry.sets+' 组'+
+        (entry.rpe == null ? '' : ' · RPE '+entry.rpe));
+      meta.className = 'entry-meta';
+      const actions = text('div','');
+      actions.className = 'row-controls';
+      actions.hidden = true;
+      const toggle = button('···',()=>reveal(actions.hidden),item.name+'第'+(position+1)+'条记录的操作');
+      toggle.className = 'row-menu';
+      toggle.setAttribute('aria-expanded','false');
+      function reveal(show) {
+        actions.hidden = !show;
+        toggle.setAttribute('aria-expanded',String(show));
+      }
+      line.append(meta,toggle);
+      row.append(line);
+      if (entry.note) {
+        const note = text('p',entry.note);
+        note.className = 'entry-note';
+        row.append(note);
+      }
+      const edit = button('编辑',event=>fillEntry(index,false,event.currentTarget));
+      const remove = button('删除',()=>{
+        if (!confirm('删除「'+item.name+'」的这条记录？')) return;
+        draft.splice(index,1);
+        if (editing === index) resetForm();
+        else if (editing > index) editing--;
+        hasChanges = true;
+        renderDraft();
+      });
+      remove.className = 'remove';
+      actions.append(edit,remove);
+      if (position) actions.append(button('记录上移',()=>shiftRow(index,indices[position-1])));
+      if (position+1<indices.length) actions.append(button('记录下移',()=>shiftRow(index,indices[position+1])));
+      if (groupIndex) actions.append(button('动作上移',()=>shiftGroup(groups,groupIndex,groupIndex-1)));
+      if (groupIndex+1<groups.length) actions.append(button('动作下移',()=>shiftGroup(groups,groupIndex,groupIndex+1)));
+      row.append(actions);
+      let start;
+      row.onpointerdown = event => { start = [event.clientX,event.clientY]; };
+      row.onpointercancel = () => { start = null; };
+      row.onpointerup = event => {
+        if (!start) return;
+        const dx = event.clientX-start[0];
+        if (Math.abs(dx)>48 && Math.abs(dx)>2*Math.abs(event.clientY-start[1])) reveal(dx<0);
+        start = null;
+      };
+      card.append(row);
     }
-    actions.append(edit,up,down,remove);
-    li.append(actions);
-    return li;
+    return card;
   }));
 }
+
 function resetForm() {
   editing = -1;
   $('exercise-form').reset();
   setMovement('');
-  $('add-entry').textContent = '添加动作';
+  $('add-entry').textContent = '记入当天';
   setWeight(0);
   repsWheel.set(8);
   setsWheel.set(3);
@@ -589,7 +792,7 @@ function renderPlan() {
     openPage('log');
     resetForm();
     applyPlan(entry);
-    $('movement').focus();
+    openComposer();
   },true));
 }
 const planSheet = $('plan-sheet');
@@ -628,7 +831,7 @@ function openPlan(isPicking, trigger) {
 $('other-move').onclick = event => openPlan(true,event.currentTarget);
 $('cancel-entry').onclick = () => {
   resetForm();
-  $('quick-moves').querySelector('button').focus();
+  foldComposer();
 };
 $('movement').onclick = event => openPlan(true,event.currentTarget);
 $('calendar-plan').onclick = event => openPlan(false,event.currentTarget);
@@ -656,9 +859,9 @@ $('custom-form').onsubmit = event => {
   closePlan();
 };
 const daySheet = $('day-sheet');
-const trainingEditor = $('training-editor');
+
 const wheels = [weightWheel,repsWheel,setsWheel,rpeWheel];
-let logDraft = null;
+
 
 function renderDaySummary() {
   const record = sessions[calendarDate];
@@ -681,45 +884,11 @@ function openDay(iso) {
   daySheet.scrollTop = 0;
 }
 $('edit-date').onclick = () => {
-  if ($('save').disabled) return;
-  if (!persistEditorDraft()) return;
-  logDraft = {
-    date:selected, dirty:editorDirty(), draft, hasChanges, editing, movement,
-    note:$('note').value, noteOpen:$('session-note').open, exerciseNote:$('exercise-note').value,
-    wheelValues:wheels.map(wheel => wheel.value()), status:$('status').textContent
-  };
-  daySheet.setAttribute('data-editing','');
-  $('day-title').textContent = '编辑训练';
-  $('day-summary').hidden = true;
-  daySheet.append(trainingEditor);
-  daySheet.scrollTop = 0;
-  loadEditorDate(calendarDate);
-  $('close-day').focus({preventScroll:true});
+  if ($('save').disabled || !choose(calendarDate)) return;
+  daySheet.close();
+  openPage('log');
 };
 function closeDay() {
-  if (logDraft && $('save').disabled) return;
-  if (logDraft && !persistEditorDraft()) return;
-  if (logDraft) {
-    const previous = logDraft;
-    $('log-page').append(trainingEditor);
-    logDraft = null;
-    daySheet.removeAttribute('data-editing');
-    $('day-summary').hidden = false;
-    loadEditorDate(previous.date);
-    if (previous.dirty) {
-      draft = previous.draft;
-      hasChanges = previous.hasChanges;
-      editing = previous.editing;
-      setMovement(previous.movement);
-      wheels.forEach((wheel,index) => wheel.set(previous.wheelValues[index]));
-      $('note').value = previous.note;
-      $('exercise-note').value = previous.exerciseNote;
-      $('add-entry').textContent = editing < 0 ? '添加动作' : '更新动作';
-      renderDraft();
-    }
-    $('session-note').open = previous.noteOpen || Boolean($('note').value);
-    $('status').textContent = previous.status;
-  }
   daySheet.close();
   $('calendar').querySelector('[data-selected]')?.focus({preventScroll:true});
 }
@@ -769,9 +938,16 @@ function stageExercise() {
 }
 $('exercise-form').onsubmit = event => {
   event.preventDefault();
-  if (!movement) return;
+  if (!movement || !entrySheet.open || closingEntry) return;
+  const source = $('add-entry').getBoundingClientRect();
+  const index = editing < 0 ? draft.length : editing;
   stageExercise();
-  if (!logDraft) $('quick-moves').querySelector('button').focus({preventScroll:true});
+  entrySheet.close();
+  const target = $('entries').querySelector('[data-entry="' + index + '"]');
+  target.scrollIntoView({block:'nearest',behavior:'instant'});
+  animateArrival(source,target);
+  target.querySelector('button').focus({preventScroll:true});
+
 };
 function saveLocalEdit(record) {
   const next = {...localEdits,[record.date]:record};
@@ -790,13 +966,13 @@ function saveLocalEdit(record) {
   return true;
 }
 $('save').onclick = async () => {
-  if (movement) stageExercise();
+  if (movement) { openComposer(); return; }
   if (!draft.length && !sessions[selected]) { $('status').textContent = '请先添加至少一个动作。'; return; }
   if (selected > today) { $('status').textContent = '训练完成后才可保存到日历。'; return; }
   const record = {...sessions[selected],date:selected,exercises:draft.slice(),note:$('note').value.trim()};
   if (!saveLocalEdit(record)) return;
   $('save').disabled = true;
-  if (logDraft) $('close-day').disabled = true;
+
   $('save').textContent = '正在同步...';
   $('status').textContent = '正在上传 GitHub...';
   try {
@@ -814,10 +990,8 @@ $('save').onclick = async () => {
       $('status').textContent = '已保存到本机，云端同步待重试。';
     }
   } finally {
-    renderHomeState();
     $('save').disabled = false;
-    $('close-day').disabled = false;
-    $('save').textContent = '保存当天训练';
+    renderHomeState();
   }
 };
 async function cloudRequest(path,options={}) {
@@ -1028,7 +1202,7 @@ function restoreEditorDraft(iso) {
   $('note').value = saved.note || '';
   $('session-note').open = Boolean(saved.noteOpen || saved.note);
   $('exercise-note').value = saved.exerciseNote || '';
-  $('add-entry').textContent = editing < 0 ? '添加动作' : '更新动作';
+  $('add-entry').textContent = editing < 0 ? '记入当天' : '更新记录';
   $('draft-status').textContent = '已恢复未保存的草稿，可以继续填写。';
 }
 // Save after handlers finish so every click, wheel change and note is captured.
@@ -1037,7 +1211,7 @@ for (const event of ['click','input','change','keydown']) {
 }
 window.addEventListener('beforeunload',event => {
   persistEditorDraft();
-  if (!editorDirty() && !logDraft?.dirty) return;
+  if (!editorDirty()) return;
   event.preventDefault();
   event.returnValue = '';
 });
@@ -1047,7 +1221,10 @@ document.addEventListener('visibilitychange',() => {
 });
 $('record-today').onclick = () => {
   refreshToday();
-  if (choose(today)) openPage('log');
+  const origin = $('record-today').getBoundingClientRect();
+  if (!choose(today)) return;
+  openPage('log');
+  openComposer(origin);
 };
 $('open-log').onclick = () => openPage('log');
 $('open-plans').onclick = () => openPage('plans');
@@ -1061,4 +1238,5 @@ refreshPublicRecords();
 if(cloudPassword){$('cloud-connect').textContent='重新验证云端';void syncPendingEdits()}
 </script>
 </html>
+
 
