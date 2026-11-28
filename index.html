@@ -146,6 +146,7 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 .calendar button[aria-current=date]{text-underline-offset:3px}
 .calendar button.done .mark{width:auto;height:12px;font-size:11px;border:0;color:inherit;line-height:1;margin:0}
 .calendar .mark:empty{display:none}
+.calendar button.swim-day .mark{display:flex;align-items:center;gap:3px;height:14px;font-size:12px;line-height:1}
 #day-exercises li:last-child{border-bottom:0}
 .tabs button[aria-pressed=true]{background:var(--accent);color:white;border-radius:12px}
 .tabs button{color:#595959}
@@ -425,15 +426,22 @@ function renderCalendar() {
     const iso = month + '-' + String(day).padStart(2,'0');
     const pending = Object.hasOwn(localEdits,iso);
     const marker = pending ? '·' : hasTraining(sessions[iso]) ? '✓' : '';
+    const swimDay = iso === '2026-11-26';
     const button = text('button',String(day));
     button.dataset.date = iso;
     button.setAttribute('aria-haspopup','dialog');
     if (marker) button.classList.add(pending ? 'pending-day' : 'done');
     if (iso === calendarDate) button.setAttribute('data-selected','');
     if (iso === today) button.setAttribute('aria-current','date');
-    button.setAttribute('aria-label',iso + (pending ? ' 本机已保存，待同步' : marker ? ' 已打卡' : ''));
+    button.setAttribute('aria-label',iso + (swimDay ? ' 游泳日' : '') + (pending ? ' 本机已保存，待同步' : marker ? ' 已打卡' : ''));
     const mark = text('span',marker);
     mark.className = 'mark';
+    if (swimDay) {
+      button.classList.add('swim-day');
+      const swimMark = text('span','🏊');
+      swimMark.setAttribute('aria-hidden','true');
+      mark.prepend(swimMark);
+    }
     button.append(mark);
     button.onclick = () => openDay(iso);
     grid.append(button);
