@@ -109,7 +109,9 @@ main{max-width:860px;padding-inline:clamp(14px,3vw,30px)}
 header{align-items:center;border-bottom:1px solid var(--edge);padding:0 2px 14px;margin-bottom:18px}
 header h1{font-size:22px;letter-spacing:-.04em}
 header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-numeric:tabular-nums}
+.header-meta{display:grid;justify-items:end;gap:2px}
 .header-date{display:flex;align-items:center;gap:8px;white-space:nowrap}
+#cloud-status{font:inherit;color:inherit;background:none;border:0;min-height:0;padding:0}
 #go-today{min-height:32px;padding:3px 8px;font-size:13px}
 #log-page,#plan-page,#checkin-page{width:100%;max-width:none;margin:0 auto;background:var(--surface);border:1px solid var(--edge);border-radius:20px;padding:clamp(16px,3.5vw,32px)}
 #log-page #training-editor{max-width:650px;margin-inline:auto}
@@ -122,9 +124,9 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 #save,#add-entry,#edit-date,.sheet button.dark{background:var(--accent);border-color:var(--accent);color:white}
 #session-note{padding:9px 0;margin-block:8px;border-top:1px solid var(--edge)}
 #session-note summary{width:fit-content;cursor:pointer;padding:5px 0}
-#sync-options{margin:0 0 10px;text-align:right;color:#555;font-size:14px}
-#sync-options summary{width:fit-content;margin-left:auto;padding:4px 0;overflow-wrap:anywhere}
-.sync-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:6px}
+#sync-dialog{width:min(calc(100% - 28px),400px);margin:auto;border-radius:20px}
+#sync-detail{margin:12px 0;overflow-wrap:anywhere}
+.sync-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
 #home-save-state:not(:empty){background:var(--canvas);border-radius:20px;padding:3px 9px}
 #plan-list{gap:10px;margin-top:18px}
 #plan-list .plan-item{border:1px solid var(--edge);border-radius:14px;padding:12px;gap:12px;min-width:0}
@@ -151,7 +153,7 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 @media(prefers-reduced-motion:reduce){#compose{transition:none}}
 @media(min-width:721px){
  main{padding-top:24px;padding-bottom:48px}
- header{margin:0 0 22px;padding:0;border:0;min-height:54px;gap:18px}
+ header{margin:0 0 22px;padding:0 0 10px;min-height:54px;gap:18px}
  .tabs{position:static;align-items:center;justify-content:center;gap:3px;margin:0;min-height:54px;padding:4px;background:#fff;border:1px solid var(--edge);border-radius:14px}
  .tabs button{width:auto;flex-direction:row;gap:5px;padding:5px 13px;min-height:34px}
  .tabs button span[aria-hidden=true]{font-size:17px;line-height:1}
@@ -213,7 +215,10 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 <button type="button" id="compose" aria-controls="log-page"><span aria-hidden="true">＋</span><span id="compose-label">记录训练</span></button>
 <button id="open-plans" aria-pressed="false"><span aria-hidden="true">☷</span>计划</button>
 </nav>
-<div class="header-date"><small id="header-date"></small><button type="button" id="go-today" hidden>回到今天</button></div>
+<div class="header-meta">
+<div class="header-date"><button type="button" id="go-today" hidden>回到今天</button><small id="header-date"></small></div>
+<small id="sync-status" role="status" hidden><span id="sync-confirmed" hidden>云端已同步</span><button type="button" id="cloud-status" aria-haspopup="dialog" aria-controls="sync-dialog">云端未连接</button></small>
+</div>
 </header>
 <div class="layout">
 <section id="checkin-page" aria-labelledby="cal-title">
@@ -223,13 +228,6 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 <div class="calendar" id="calendar"></div>
 <button type="button" id="resume-draft" hidden></button>
 </section>
-<details id="sync-options" hidden>
-<summary><span id="cloud-status" role="status">云端未连接</span></summary>
-<div class="sync-actions">
-<button type="button" id="cloud-connect">连接云端</button>
-<button type="button" id="cloud-sync">同步待上传记录</button>
-</div>
-</details>
 <section id="log-page" class="editor" aria-label="记录训练" hidden>
 <div id="training-editor">
 <div class="home-only home-list-title"><div class="line"><h3>当天动作<span id="home-count"></span></h3><span id="home-save-state" role="status"></span></div></div>
@@ -247,6 +245,14 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 <div id="plan-list" class="plan-list"></div>
 </section>
 </main>
+<dialog id="sync-dialog" class="sheet" aria-labelledby="sync-title" aria-describedby="sync-detail">
+<div class="line"><h2 id="sync-title">云端同步</h2><button type="button" id="close-sync" autofocus>关闭</button></div>
+<p id="sync-detail" class="muted" role="status">连接云端后，可同步保存的训练记录。</p>
+<div class="sync-actions" id="sync-actions">
+<button type="button" id="cloud-connect">连接云端</button>
+<button type="button" id="cloud-sync" hidden>重试同步</button>
+</div>
+</dialog>
 <dialog id="entry-sheet" class="sheet" aria-labelledby="entry-title">
 <div id="sheet-grip" aria-hidden="true"><i></i></div>
 <div class="line"><h2 id="entry-title">记录动作</h2><button id="fold-entry" type="button" autofocus>收起</button></div>
@@ -968,6 +974,7 @@ function saveLocalEdit(record) {
     return false;
   }
   localEdits = next;
+  if (cloudPassword) setCloudStatus('pending','训练记录已保存在本机，等待上传。');
   sessions = {...sessions,[record.date]:record};
   hasChanges = false;
   persistEditorDraft();
@@ -1056,10 +1063,10 @@ async function syncPendingEdits(){
       }
       const updated=await cloudRequest('/api/history');
       mergeCloudRecords(updated);
-      $('cloud-status').textContent='✓ 云端已同步';
+      setCloudStatus('synced','云端已同步。');
       return true;
     }catch(e){
-      $('cloud-status').textContent='同步失败，本机记录已保留：'+e.message;
+      setCloudStatus('failed','同步失败，本机记录已保留：'+e.message);
       return false;
     }finally{cloudBusy=false}
   })();
@@ -1071,7 +1078,7 @@ async function connectCloud(){
   if(cloudBusy)return;
   const password=prompt('请输入云端密码，验证后会在此浏览器保持登录');
   if(password===null)return;
-  if(!password){$('cloud-status').textContent='密码不能为空';return}
+  if(!password){setCloudStatus('failed','密码不能为空');return}
   const previousPassword = cloudPassword;
   cloudPassword=password;
   try{
@@ -1087,11 +1094,28 @@ async function connectCloud(){
     await syncPendingEdits();
   }catch(e){
     cloudPassword=previousPassword;
-    $('cloud-status').textContent='云端连接失败：'+e.message;
+    setCloudStatus('failed','云端连接失败：'+e.message);
   }
 }
+const syncDialog = $('sync-dialog');
+const cloudStatusLabels = {disconnected:'云端未连接', pending:'云端待同步', failed:'云端同步失败'};
+function setCloudStatus(state, detail) {
+  const synced = state === 'synced';
+  $('sync-confirmed').hidden = !synced;
+  $('cloud-status').hidden = synced;
+  if (!synced) $('cloud-status').textContent = cloudStatusLabels[state];
+  $('sync-detail').textContent = detail;
+  $('sync-actions').hidden = synced;
+  $('cloud-sync').hidden = !cloudPassword;
+  if (synced && syncDialog.open) $('close-sync').focus();
+}
+$('cloud-status').onclick = () => syncDialog.showModal();
+$('close-sync').onclick = () => syncDialog.close();
 $('cloud-connect').onclick=connectCloud;
-$('cloud-sync').onclick=()=>cloudPassword?void syncPendingEdits():void connectCloud();
+$('cloud-sync').onclick=() => {
+  if (!navigator.onLine) setCloudStatus('pending','当前网络已断开，联网后会自动重试。');
+  else void syncPendingEdits();
+};
 let refreshing = false;
 let lastRefresh = 0;
 async function refreshPublicRecords() {
@@ -1129,9 +1153,9 @@ async function refreshPublicRecords() {
     sessions = merged;
     if (selectedChanged && !editorDirty() && !$('save').disabled) loadEditorDate(selected);
     else renderCalendar();
-    $('cloud-status').textContent = '云端未连接';
+    if (!cloudPassword) setCloudStatus('disconnected','连接云端后，可同步保存的训练记录。');
   } catch {
-    $('cloud-status').textContent = '暂时无法读取公开训练记录，稍后会自动重试。';
+    if (!cloudPassword) setCloudStatus('failed','暂时无法读取公开训练记录，稍后会自动重试。');
   } finally {
     refreshing = false;
   }
@@ -1154,7 +1178,7 @@ function openPage(page) {
   const logIsOpen = page === 'log';
   $('checkin-page').hidden = page !== 'checkins';
   $('log-page').hidden = !logIsOpen;
-  $('sync-options').hidden = !logIsOpen;
+  $('sync-status').hidden = !logIsOpen;
   $('plan-page').hidden = page !== 'plans';
   for (const name of ['plans','checkins']) {
     $('open-' + name).setAttribute('aria-pressed',String(page === name));
@@ -1243,8 +1267,11 @@ choose(today);
 draftsReady = true;
 renderDraftLink();
 openPage('checkins');
+if (cloudPassword) {
+  $('cloud-connect').textContent = '重新验证云端';
+  setCloudStatus('pending','云端记录将在联网后同步。');
+}
 refreshPublicRecords();
-if(cloudPassword){$('cloud-connect').textContent='重新验证云端';void syncPendingEdits()}
 </script>
 </html>
 
