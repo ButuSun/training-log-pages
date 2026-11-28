@@ -12,7 +12,7 @@
 body{background:#fff}main{max-width:880px;padding:30px 28px 120px}header{margin-bottom:32px}section{border:0;border-radius:0;padding:0;background:transparent}
 .tabs{position:fixed;bottom:0;left:0;right:0;z-index:20;display:flex;justify-content:center;background:rgba(255,255,255,.97);border-top:1px solid #eee;padding:8px 12px calc(8px + env(safe-area-inset-bottom))}
 .tabs button{width:160px;display:flex;flex-direction:column;align-items:center;gap:0;border:0;border-radius:0;color:#999;background:none;font-size:13px}
-.tabs button span{font-size:27px;line-height:32px}.tabs button[aria-pressed=true]{color:#111;font-weight:700}
+.tabs button span[aria-hidden=true]{font-size:27px;line-height:32px}.tabs button[aria-pressed=true]{color:#111;font-weight:700}
 .quick-actions{margin:18px 0}.quick-actions button{background:#f3f3f3;border:0;border-radius:24px;padding:10px 18px}
 #movement{font-size:23px;font-weight:650;border:0;border-bottom:1px solid #eee;border-radius:0;padding:12px 0}
 .form-grid{margin:26px 0;gap:40px}.wheel-shell{border:0}.wheel-shell::before{border-radius:10px;background:#f3f3f3}.wheel div{font-size:23px}
@@ -110,8 +110,10 @@ main{max-width:860px;padding-inline:clamp(14px,3vw,30px)}
 header{align-items:center;border-bottom:1px solid var(--edge);padding:0 2px 14px;margin-bottom:18px}
 header h1{font-size:22px;letter-spacing:-.04em}
 header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-numeric:tabular-nums}
+.header-date{display:flex;align-items:center;gap:8px;white-space:nowrap}
+#go-today{min-height:32px;padding:3px 8px;font-size:13px}
 #log-page,#plan-page,#checkin-page{width:100%;max-width:none;margin:0 auto;background:var(--surface);border:1px solid var(--edge);border-radius:20px;padding:clamp(16px,3.5vw,32px)}
-#log-page #training-editor,#log-page>.line,#log-page>#selected{max-width:650px;margin-inline:auto}
+#log-page #training-editor{max-width:650px;margin-inline:auto}
 #log-page .home-picker{background:var(--canvas);border:1px solid var(--edge)}
 #quick-moves button{padding:10px 14px;color:var(--ink);font-size:16px}
 #quick-moves button small{display:block;color:#595959;font-size:12px;font-weight:400;margin-top:3px}
@@ -142,19 +144,24 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 #day-exercises li:last-child{border-bottom:0}
 .tabs button[aria-pressed=true]{background:var(--accent);color:white;border-radius:12px}
 .tabs button{color:#595959}
+#compose{flex:0 0 auto;width:114px;color:#404040;border-radius:28px;white-space:nowrap;transition:width .28s cubic-bezier(.22,1,.36,1),min-height .28s cubic-bezier(.22,1,.36,1),background-color .2s,color .2s,box-shadow .2s}
+#compose[aria-haspopup=dialog]{width:164px;min-height:44px;background:var(--accent);color:white;font-size:16px;font-weight:650;box-shadow:0 4px 12px #15151526}
+@media(prefers-reduced-motion:reduce){#compose{transition:none}}
 @media(min-width:721px){
  main{padding-top:24px;padding-bottom:48px}
- header{margin:0;padding:0;border:0;min-height:50px;justify-content:flex-start;gap:18px}
- .tabs{position:static;justify-content:flex-end;gap:3px;margin:-46px 0 22px auto;width:fit-content;padding:4px;background:#fff;border:1px solid var(--edge);border-radius:14px}
+ header{margin:0 0 22px;padding:0;border:0;min-height:54px;gap:18px}
+ .tabs{position:static;align-items:center;justify-content:center;gap:3px;margin:0;min-height:54px;padding:4px;background:#fff;border:1px solid var(--edge);border-radius:14px}
  .tabs button{width:auto;flex-direction:row;gap:5px;padding:5px 13px;min-height:34px}
- .tabs button span{font-size:17px;line-height:1}
+ .tabs button span[aria-hidden=true]{font-size:17px;line-height:1}
  #plan-list{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:720px){
  main{padding-top:15px;padding-bottom:calc(95px + env(safe-area-inset-bottom))}
- .tabs{gap:8px;padding:6px 12px calc(6px + env(safe-area-inset-bottom));border-color:var(--edge)}
- .tabs button{min-height:47px}
- .tabs button span{font-size:20px;line-height:22px}
+ .tabs{align-items:center;gap:8px;margin:0;min-height:calc(70px + env(safe-area-inset-bottom));padding:6px 12px calc(6px + env(safe-area-inset-bottom));border-color:var(--edge)}
+ .tabs button{min-height:47px;min-width:0}
+ .tabs button span[aria-hidden=true]{font-size:20px;line-height:22px}
+ #compose{width:min(37%,144px);padding:3px 8px}
+ #compose[aria-haspopup=dialog]{flex-direction:row;justify-content:center;gap:5px;width:min(54%,220px);max-width:none;min-height:54px}
  #quick-moves{gap:7px}
  #log-page .home-picker,#log-page #exercise-form{padding:12px}
  .calendar{gap:4px 2px}
@@ -162,19 +169,13 @@ header small,.wheel-label,#home-count,#home-save-state,.entry-meta{font-variant-
 }
 
 .illustration{filter:grayscale(1)}
-#record-today{width:100%;min-height:50px;margin-top:22px;border-radius:12px}
 #resume-draft{width:100%;margin-top:10px;background:#f5f5f5;border:0}
 #draft-status{font-size:14px;margin:8px 0;color:#555}
-#entry-dock{position:fixed;z-index:19;bottom:calc(86px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:max-content;max-width:94vw}
-#compose,#record-today{border:0;border-radius:28px;background:#202020;color:#fff;font-weight:650;box-shadow:0 4px 16px #15151526}
-#compose{min-height:48px;padding:10px 24px}
 #log-page{padding-bottom:24px}
-body:has(#log-page:not([hidden])) main{padding-bottom:calc(165px + env(safe-area-inset-bottom))}
 #entry-sheet{width:min(calc(100% - 16px),510px);margin:auto auto max(8px,env(safe-area-inset-bottom));padding:0 18px 18px;border-radius:25px;max-height:88dvh;overflow:auto}
 #entry-sheet[open]{animation:none}
 #entry-sheet>.line{margin:0 0 14px}
-#compose{max-width:min(90vw,450px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#entry-sheet button,#entry-dock button{-webkit-tap-highlight-color:transparent}
+#entry-sheet button,#compose{-webkit-tap-highlight-color:transparent}
 #entry-sheet .wheel{height:120px;padding:40px 0}
 #entry-sheet .wheel-shell::before{inset:40px 0}
 #entry-sheet .wheel-shell{margin-top:4px}
@@ -199,29 +200,32 @@ body:has(#log-page:not([hidden])) main{padding-bottom:calc(165px + env(safe-area
 #entries .row-controls button{margin:0;min-height:38px;padding:4px 10px}
 #entries .remove{color:#9d3838}
 .entry-flight{position:fixed;z-index:30;pointer-events:none;box-sizing:border-box;border-radius:14px;background:#242424;color:white;padding:8px 12px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;font-size:14px;transform-origin:center}
-@media(min-width:721px){#entry-dock{bottom:22px}#entry-sheet{margin:auto}body:has(#log-page:not([hidden])) main{padding-bottom:95px}}
+@media(min-width:721px){#entry-sheet{margin:auto}}
 
 </style>
 <main>
-<header><h1>力量训练</h1><small id="today"></small></header>
-<nav class="tabs" aria-label="主导航"><button id="open-checkins" aria-pressed="true"><span aria-hidden="true">▦</span>日历</button><button id="open-log" aria-pressed="false"><span aria-hidden="true">＋</span>记录训练</button><button id="open-plans" aria-pressed="false"><span aria-hidden="true">☷</span>计划</button></nav>
+<header>
+<h1>力量训练</h1>
+<nav class="tabs" aria-label="主导航">
+<button id="open-checkins" aria-pressed="true"><span aria-hidden="true">▦</span>日历</button>
+<button type="button" id="compose" aria-controls="log-page"><span aria-hidden="true">＋</span><span id="compose-label">记录训练</span></button>
+<button id="open-plans" aria-pressed="false"><span aria-hidden="true">☷</span>计划</button>
+</nav>
+<div class="header-date"><small id="header-date"></small><button type="button" id="go-today" hidden>回到今天</button></div>
+</header>
 <div class="layout">
 <section id="checkin-page" aria-labelledby="cal-title">
 <div class="line"><h2 id="cal-title">训练日历</h2><button type="button" id="calendar-plan">查看计划</button></div>
 <div class="calendar-toolbar"><div><strong id="month"></strong><p class="legend" id="count"></p></div>
 <div class="month-actions"><button id="this-month" hidden>本月</button><button id="prev" aria-label="上个月">‹</button><button id="next" aria-label="下个月">›</button></div></div>
 <div class="calendar" id="calendar"></div>
-<button type="button" class="dark" id="record-today" aria-haspopup="dialog">＋ 记录今天训练</button>
 <button type="button" id="resume-draft" hidden></button>
 </section>
-<section id="log-page" class="editor" aria-labelledby="editor-title" hidden>
-<div class="line"><h2 id="editor-title">记录训练</h2><button id="go-today">回到今天</button></div>
-<p id="selected" class="muted" style="margin:5px 0 10px"></p>
+<section id="log-page" class="editor" aria-label="记录训练" hidden>
 <div id="training-editor">
 <div class="home-only home-list-title"><div class="line"><h3>当天动作<span id="home-count"></span></h3><span id="home-save-state" role="status"></span></div></div>
 <ul id="entries"></ul>
 <p id="empty-log">今天还没有动作记录</p>
-<div id="entry-dock"><button type="button" class="dark" id="compose" aria-haspopup="dialog">＋ 记录动作</button></div>
 <details id="session-note"><summary>本次备注</summary><textarea id="note" aria-label="本次备注" rows="2" maxlength="2000" placeholder="训练感受、降重原因等"></textarea></details>
 <button type="button" class="dark" id="save">保存当天训练</button>
 <p id="draft-status" role="status"></p>
@@ -362,7 +366,6 @@ function hasTraining(record) {
 }
 function renderCalendar() {
   renderHomeState();
-  $('today').textContent = today + ' 周' + days[dateAt(today).getUTCDay()];
   const [year, number] = month.split('-').map(Number);
   $('month').textContent = year + ' 年 ' + number + ' 月';
   $('this-month').hidden = month === today.slice(0,7);
@@ -503,7 +506,10 @@ function foldComposer(offset = 0) {
     {transform:'translateY('+Math.max(offset+36,66)+'px) scale(.94)',opacity:0}
   ],{duration:170,easing:'ease-in',fill:'backwards'}).finished.then(finish,finish);
 }
-compose.onclick = () => openComposer();
+compose.onclick = () => {
+  if ($('log-page').hidden) openPage('log');
+  else openComposer();
+};
 $('fold-entry').onclick = () => foldComposer();
 entrySheet.addEventListener('cancel',event => {
   event.preventDefault();
@@ -561,7 +567,6 @@ function renderHomeState() {
   $('home-count').textContent = count ? count + ' 个动作 · ' + draft.reduce((n,item)=>n+Number(item.sets),0) + ' 组' : '';
   $('empty-log').hidden = Boolean(count);
   $('empty-log').textContent = selected === today ? '今天还没有动作记录' : '当天还没有动作记录';
-  compose.textContent = movement ? '继续填写 · ' + movement : '＋ 记录动作';
   $('entry-title').textContent = editing < 0 ? '记录动作' : '编辑记录';
   let state = '';
   if (hasChanges || movement) state = '未保存';
@@ -715,15 +720,17 @@ function loadEditorDate(iso, moveMonth = false) {
   $('session-note').open = Boolean($('note').value);
   hasChanges = false;
   $('status').textContent = '';
-  renderEditorDate();
+  renderHeaderDate();
   resetForm();
   restoreEditorDraft(iso);
   renderDraft();
   renderCalendar();
 }
-function renderEditorDate() {
-  $('go-today').hidden = selected === today;
-  $('selected').textContent = selected + ' 周' + days[dateAt(selected).getUTCDay()];
+function renderHeaderDate() {
+  const logIsOpen = !$('log-page').hidden;
+  const date = logIsOpen ? selected : today;
+  $('go-today').hidden = !logIsOpen || selected === today;
+  $('header-date').textContent = date + ' 周' + days[dateAt(date).getUTCDay()];
 }
 function applyPlan([name,,weight,reps,sets]) {
   setMovement(name);
@@ -1134,19 +1141,25 @@ function refreshToday() {
   const current = chinaDate.format(new Date());
   if (current === today) return;
   today = current;
-  renderEditorDate();
+  renderHeaderDate();
   renderCalendar();
 }
 document.addEventListener('visibilitychange',refreshToday);
 setInterval(refreshToday,30000);
 function openPage(page) {
   persistEditorDraft();
+  const logIsOpen = page === 'log';
   $('checkin-page').hidden = page !== 'checkins';
-  $('log-page').hidden = page !== 'log';
+  $('log-page').hidden = !logIsOpen;
   $('plan-page').hidden = page !== 'plans';
-  for (const name of ['log','plans','checkins']) {
+  for (const name of ['plans','checkins']) {
     $('open-' + name).setAttribute('aria-pressed',String(page === name));
   }
+  $('compose-label').textContent = logIsOpen ? '记录动作' : '记录训练';
+  compose.setAttribute('aria-controls',logIsOpen ? 'entry-sheet' : 'log-page');
+  if (logIsOpen) compose.setAttribute('aria-haspopup','dialog');
+  else compose.removeAttribute('aria-haspopup');
+  renderHeaderDate();
   if (page === 'plans') renderPlan();
   if (page === 'checkins') renderCalendar();
   else if (page === 'log') {
@@ -1219,14 +1232,6 @@ window.addEventListener('pagehide',persistEditorDraft);
 document.addEventListener('visibilitychange',() => {
   if (document.hidden) persistEditorDraft();
 });
-$('record-today').onclick = () => {
-  refreshToday();
-  const origin = $('record-today').getBoundingClientRect();
-  if (!choose(today)) return;
-  openPage('log');
-  openComposer(origin);
-};
-$('open-log').onclick = () => openPage('log');
 $('open-plans').onclick = () => openPage('plans');
 $('open-checkins').onclick = () => openPage('checkins');
 renderPlan();
